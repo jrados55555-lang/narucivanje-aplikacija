@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Pregled Termina</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .btn-obrisi { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }
+        .btn-obrisi:hover { background-color: #bd2130; }
+    </style>
+</head>
+<body>
+
+    <h2>Admin Panel - Zakazani Termini</h2>
+    <button onclick="ucitajRezervacije()">Osvježi listu</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Vrijeme</th>
+                <th>Ime i prezime</th>
+                <th>Akcija</th>
+            </tr>
+        </thead>
+        <tbody id="tablica">
+        </tbody>
+    </table>
+
+    <script>
+        async function ucitajRezervacije() {
+            const res = await fetch('/api/rezervacije');
+            const podaci = await res.json();
+            const tablica = document.getElementById('tablica');
+            tablica.innerHTML = '';
+
+            if (podaci.length === 0) {
+                tablica.innerHTML = '<tr><td colspan="4">Nema zakazanih termina.</td></tr>';
+                return;
+            }
+
+            podaci.forEach(r => {
+                const red = document.createElement('tr');
+                red.innerHTML = `
+                    <td><b>${r.datum}</b></td>
+                    <td>${r.vrijeme}</td>
+                    <td>${r.ime}</td>
+                    <td><button class="btn-obrisi" onclick="obrisiTermin(${r.id})">Obriši</button></td>
+                `;
+                tablica.appendChild(red);
+            });
+        }
+
+        async function obrisiTermin(id) {
+            if (confirm('Jeste li sigurni da želite obrisati ovaj termin?')) {
+                await fetch(`/api/rezervacije/${id}`, { method: 'DELETE' });
+                ucitajRezervacije();
+            }
+        }
+
+        ucitajRezervacije();
+    </script>
+</body>
+</html>
