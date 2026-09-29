@@ -5,71 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Naručivanje</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        form, table { margin-bottom: 20px; max-width: 500px; }
-        input, button { display: block; margin: 10px 0; padding: 8px; width: 100%; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background-color: #f4f4f4; }
+        body { font-family: Arial, sans-serif; max-width: 400px; margin: 30px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input, select, button { width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; border: none; font-size: 16px; margin-top: 20px; cursor: pointer; border-radius: 4px; }
+        button:hover { background-color: #218838; }
+        .poruka { margin-top: 15px; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
 
-    <h2>Nova rezervacija</h2>
-    <form id="forma">
-        <input type="text" id="ime" placeholder="Vaše ime" required />
-        <input type="date" id="datum" required />
-        <input type="time" id="vrijeme" required />
-        <button type="submit">Spremi rezervaciju</button>
-    </form>
+    <h2>Rezervacija termina</h2>
+    
+    <label for="ime">Ime i prezime:</label>
+    <input type="text" id="ime" placeholder="Unesite vaše ime" required />
 
-    <h2>Sve rezervacije</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Ime</th>
-                <th>Datum</th>
-                <th>Vrijeme</th>
-            </tr>
-        </thead>
-        <tbody id="tablica-tijelo">
-        </tbody>
-    </table>
+    <label for="datum">Datum:</label>
+    <input type="date" id="datum" required />
+
+    <label for="vrijeme">Vrijeme (11:00 - 20:00):</label>
+    <select id="vrijeme" required>
+        <option value="">-- Odaberite datum prvo --</option>
+    </select>
+
+    <button id="btnSpremi">Potvrdi rezervaciju</button>
+    <div id="poruka" class="poruka"></div>
 
     <script>
-        async function ucitajRezervacije() {
+        const radnoVrijeme = [
+            "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+            "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+            "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"
+        ];
+
+        const datumInput = document.getElementById('datum');
+        const vrijemeSelect = document.getElementById('vrijeme');
+        
+        // Postavi minimalni datum na danas
+        datumInput.min = new Date().toISOString().split('T')[0];
+
+        datumInput.addEventListener('change', async () => {
+            const odabraniDatum = datumInput.value;
+            if (!odabraniDatum) return;
+
             const res = await fetch('/api/rezervacije');
-            const podaci = await res.json();
-            const tijelo = document.getElementById('tablica-tijelo');
-            tijelo.innerHTML = '';
+            const sveRezervacije = await res.json();
             
-            podaci.forEach(r => {
-                const red = `<tr>
-                    <td>${r.ime}</td>
-                    <td>${r.datum}</td>
-                    <td>${r.vrijeme}</td>
-                </tr>`;
-                tijelo.innerHTML += red;
+            // Nađi zauzeta vremena za odabrani datum
+            const zauzetiTermini = sveRezervacije
+                .filter(r => r.datum === odabraniDatum)
+                .map(r => r.vrijeme);
+
+            vrijemeSelect.innerHTML = '<option value="">-- Odaberite vrijeme --</option>';
+            
+            radnoVrijeme.forEach(sat => {
+                const option = document.createElement('option');
+                option.value = sat;
+                if (zauzetiTermini.includes(sat)) {
+                    option.textContent = `${sat} (Zauzeto)`;
+                    option.disabled = true;
+                } else {
+                    option.textContent = sat;
+                }
+                vrijemeSelect.appendChild(option);
             });
-        }
+        });
 
-        document.getElementById('forma').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        document.getElementById('btnSpremi').addEventListener('click', async () => {
             const ime = document.getElementById('ime').value;
-            const datum = document.getElementById('datum').value;
-            const vrijeme = document.getElementById('vrijeme').value;
+            const datum = datumInput.value;
+            const vrijeme = vrijemeSelect.value;
+            const porukaDiv = document.getElementById('poruka');
 
-            await fetch('/api/rezervacije', {
+            if (!ime || !datum || !vrijeme) {
+                porukaDiv.style.color = 'red';
+                porukaDiv.textContent = 'Molimo ispunite sva polja!';
+                return;
+            }
+
+            const res = await fetch('/api/rezervacije', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ime, datum, vrijeme })
             });
 
-            document.getElementById('forma').reset();
-            ucitajRezervacije();
+            if (res.ok) {
+                porukaDiv.style.color = 'green';
+                porukaDiv.textContent = 'Uspješno ste rezervirali termin!';
+                document.getElementById('ime').value = '';
+                datumInput.value = '';
+                vrijemeSelect.innerHTML = '<option value="">-- Odaberite datum prvo --</option>';
+            } else {
+                porukaDiv.style.color = 'red';
+                porukaDiv.textContent = 'Termin je u međuvremenu zauzet.';
+            }
         });
-
-        ucitajRezervacije();
     </script>
 </body>
 </html>
