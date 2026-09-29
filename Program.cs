@@ -6,39 +6,40 @@ var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-string putanjaBaze = "Data Source=raspored.db";
-
-using (var konekcija = new SqliteConnection(putanjaBaze))
+// Inicijalizacija SQLite baze
+using (var connection = new SqliteConnection("Data Source=raspored.db"))
 {
-    konekcija.Open();
-    var naredba = konekcija.CreateCommand();
-    naredba.CommandText = @"
-        CREATE TABLE IF NOT EXISTS Termini (
+    connection.Open();
+    var command = connection.CreateCommand();
+    command.CommandText = @"
+        CREATE TABLE IF NOT EXISTS Rezervacije (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ImeKlijenta TEXT NOT NULL,
-            Usluga TEXT NOT NULL,
-            DatumVrijeme TEXT NOT NULL
+            Ime TEXT NOT NULL,
+            Datum TEXT NOT NULL,
+            Vrijeme TEXT NOT NULL
         );";
-    naredba.ExecuteNonQuery();
+    command.ExecuteNonQuery();
 }
 
-app.MapGet("/api/termini", () =>
+// GET endpoint: Dohvaćanje svih rezervacija
+app.MapGet("/api/rezervacije", () =>
 {
     var lista = new List<object>();
-    using (var konekcija = new SqliteConnection(putanjaBaze))
+    using (var connection = new SqliteConnection("Data Source=raspored.db"))
     {
-        konekcija.Open();
-        var naredba = konekcija.CreateCommand();
-        naredba.CommandText = "SELECT Id, ImeKlijenta, Usluga, DatumVrijeme FROM Termini ORDER BY DatumVrijeme ASC;";
-        using (var citac = naredba.ExecuteReader())
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT Id, Ime, Datum, Vrijeme FROM Rezervacije ORDER BY Id DESC";
+        using (var reader = command.ExecuteReader())
         {
-            while (citac.Read())
+            while (reader.Read())
             {
-                lista.Add(new {
-                    id = citac.GetInt32(0),
-                    ime = citac.GetString(1),
-                    usluga = citac.GetString(2),
-                    datum = citac.GetString(3)
+                lista.Add(new
+                {
+                    id = reader.GetInt32(0),
+                    ime = reader.GetString(1),
+                    datum = reader.GetString(2),
+                    vrijeme = reader.GetString(3)
                 });
             }
         }
@@ -46,32 +47,25 @@ app.MapGet("/api/termini", () =>
     return Results.Ok(lista);
 });
 
-app.MapPost("/api/termini", (ZahtjevTermin zahtjev) =>
+// POST endpoint za spremanje novih rezervacija
+app.MapPost("/api/rezervacije", async (HttpRequest request) =>
 {
-    using (var konekcija = new SqliteConnection(putanjaBaze))
+    var form = await request.ReadFromJsonAsync<RezervacijaDto>();
+    if (form == null) return Results.BadRequest();
+
+    using (var connection = new SqliteConnection("Data Source=raspored.db"))
     {
-        konekcija.Open();
-        
-        var provjera = konekcija.CreateCommand();
-        provjera.CommandText = "SELECT COUNT(*) FROM Termini WHERE DatumVrijeme = $datum;";
-        provjera.Parameters.AddWithValue("$datum", zahtjev.DatumVrijeme);
-        long zauzeto = (long)provjera.ExecuteScalar();
-
-        if (zauzeto > 0)
-        {
-            return Results.BadRequest("Termin je već zauzet!");
-        }
-
-        var naredba = konekcija.CreateCommand();
-        naredba.CommandText = "INSERT INTO Termini (ImeKlijenta, Usluga, DatumVrijeme) VALUES ($ime, $usluga, $datum);";
-        naredba.Parameters.AddWithValue("$ime", zahtjev.ImeKlijenta);
-        naredba.Parameters.AddWithValue("$usluga", zahtjev.Usluga);
-        naredba.Parameters.AddWithValue("$datum", zahtjev.DatumVrijeme);
-        naredba.ExecuteNonQuery();
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO Rezervacije (Ime, Datum, Vrijeme) VALUES ($ime, $datum, $vrijeme)";
+        command.Parameters.AddWithValue("$ime", form.Ime);
+        command.Parameters.AddWithValue("$datum", form.Datum);
+        command.Parameters.AddWithValue("$vrijeme", form.Vrijeme);
+        command.ExecuteNonQuery();
     }
-    return Results.Ok("Termin uspješno rezerviran!");
+    return Results.Ok();
 });
 
 app.Run();
 
-record ZahtjevTermin(string ImeKlijenta, string Usluga, string DatumVrijeme);
+record RezervacijaDto(string Ime, string Datum, string Vrijeme);
