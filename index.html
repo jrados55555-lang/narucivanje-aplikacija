@@ -3,81 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rezervacija Termina</title>
+    <title>Naručivanje</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #eef2f5; padding: 20px; display: flex; justify-content: center; }
-        .kartica { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
-        h2 { text-align: center; color: #333; margin-top: 0; }
-        label { font-weight: bold; display: block; margin-top: 12px; margin-bottom: 5px; color: #555; }
-        input, select, button { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
-        input:focus, select:focus { border-color: #007bff; outline: none; }
-        button { background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 18px; font-size: 16px; }
-        button:hover { background: #218838; }
-        .poruka { font-weight: bold; text-align: center; margin-top: 15px; padding: 10px; border-radius: 6px; }
-        .uspjeh { background: #d4edda; color: #155724; }
-        .greska { background: #f8d7da; color: #721c24; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        form, table { margin-bottom: 20px; max-width: 500px; }
+        input, button { display: block; margin: 10px 0; padding: 8px; width: 100%; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
     </style>
 </head>
 <body>
 
-<div class="kartica">
-    <h2>Naruči se na pregled</h2>
-    
-    <label for="ime">Ime i Prezime:</label>
-    <input type="text" id="ime" placeholder="npr. Marko Marković">
+    <h2>Nova rezervacija</h2>
+    <form id="forma">
+        <input type="text" id="ime" placeholder="Vaše ime" required />
+        <input type="date" id="datum" required />
+        <input type="time" id="vrijeme" required />
+        <button type="submit">Spremi rezervaciju</button>
+    </form>
 
-    <label for="usluga">Odaberi uslugu:</label>
-    <select id="usluga">
-        <option value="Pregled zuba">Pregled zuba</option>
-        <option value="Čišćenje zubnog kamenca">Čišćenje zubnog kamenca</option>
-        <option value="Popravak zuba">Popravak zuba</option>
-        <option value="Izbjeljivanje zuba">Izbjeljivanje zuba</option>
-    </select>
+    <h2>Sve rezervacije</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Ime</th>
+                <th>Datum</th>
+                <th>Vrijeme</th>
+            </tr>
+        </thead>
+        <tbody id="tablica-tijelo">
+        </tbody>
+    </table>
 
-    <label for="datum">Datum i vrijeme termina:</label>
-    <input type="datetime-local" id="datum">
+    <script>
+        async function ucitajRezervacije() {
+            const res = await fetch('/api/rezervacije');
+            const podaci = await res.json();
+            const tijelo = document.getElementById('tablica-tijelo');
+            tijelo.innerHTML = '';
+            
+            podaci.forEach(r => {
+                const red = `<tr>
+                    <td>${r.ime}</td>
+                    <td>${r.datum}</td>
+                    <td>${r.vrijeme}</td>
+                </tr>`;
+                tijelo.innerHTML += red;
+            });
+        }
 
-    <button onclick="pošaljiRezervaciju()">Potvrdi rezervaciju</button>
+        document.getElementById('forma').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ime = document.getElementById('ime').value;
+            const datum = document.getElementById('datum').value;
+            const vrijeme = document.getElementById('vrijeme').value;
 
-    <div id="odgovor" class="poruka" style="display:none;"></div>
-</div>
+            await fetch('/api/rezervacije', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ime, datum, vrijeme })
+            });
 
-<script>
-async function pošaljiRezervaciju() {
-    const ime = document.getElementById('ime').value;
-    const usluga = document.getElementById('usluga').value;
-    const datumPolje = document.getElementById('datum').value;
-    const odgovorDiv = document.getElementById('odgovor');
+            document.getElementById('forma').reset();
+            ucitajRezervacije();
+        });
 
-    if (!ime || !datumPolje) {
-        odgovorDiv.className = 'poruka greska';
-        odgovorDiv.innerText = 'Molimo ispunite sva polja!';
-        odgovorDiv.style.display = 'block';
-        return;
-    }
-
-    const datum = datumPolje.replace('T', ' ');
-
-    const res = await fetch('/api/termini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imeKlijenta: ime, usluga: usluga, datumVrijeme: datum })
-    });
-
-    if (res.ok) {
-        odgovorDiv.className = 'poruka uspjeh';
-        odgovorDiv.innerText = 'Hvala! Vaš termin je uspješno rezerviran.';
-        document.getElementById('ime').value = '';
-        document.getElementById('datum').value = '';
-    } else {
-        const greskaTekst = await res.text();
-        odgovorDiv.className = 'poruka greska';
-        odgovorDiv.innerText = greskaTekst || 'Termin je zauzet, odaberite drugo vrijeme.';
-    }
-    odgovorDiv.style.display = 'block';
-}
-</script>
-
+        ucitajRezervacije();
+    </script>
 </body>
 </html>
