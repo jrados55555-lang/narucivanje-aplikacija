@@ -21,7 +21,7 @@ using (var connection = new SqliteConnection("Data Source=raspored.db"))
     command.ExecuteNonQuery();
 }
 
-// GET endpoint: Dohvaćanje svih rezervacija
+// GET: Dohvaćanje svih rezervacija
 app.MapGet("/api/rezervacije", () =>
 {
     var lista = new List<object>();
@@ -29,7 +29,7 @@ app.MapGet("/api/rezervacije", () =>
     {
         connection.Open();
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Ime, Datum, Vrijeme FROM Rezervacije ORDER BY Id DESC";
+        command.CommandText = "SELECT Id, Ime, Datum, Vrijeme FROM Rezervacije ORDER BY Datum ASC, Vrijeme ASC";
         using (var reader = command.ExecuteReader())
         {
             while (reader.Read())
@@ -47,20 +47,44 @@ app.MapGet("/api/rezervacije", () =>
     return Results.Ok(lista);
 });
 
-// POST endpoint za spremanje novih rezervacija
+// POST: Spremanje nove rezervacije
 app.MapPost("/api/rezervacije", async (HttpRequest request) =>
 {
     var form = await request.ReadFromJsonAsync<RezervacijaDto>();
-    if (form == null) return Results.BadRequest();
+    if (form == null || string.IsNullOrEmpty(form.Ime) || string.IsNullOrEmpty(form.Datum) || string.IsNullOrEmpty(form.Vrijeme))
+        return Results.BadRequest();
 
     using (var connection = new SqliteConnection("Data Source=raspored.db"))
     {
         connection.Open();
+        
+        // Provjera je li termin već zauzet
+        var checkCmd = connection.CreateCommand();
+        checkCmd.CommandText = "SELECT COUNT(*) FROM Rezervacije WHERE Datum = $datum AND Vrijeme = $vrijeme";
+        checkCmd.Parameters.AddWithValue("$datum", form.Datum);
+        checkCmd.Parameters.AddWithValue("$vrijeme", form.Vrijeme);
+        long count = (long)checkCmd.ExecuteScalar()!;
+        if (count > 0) return Results.Conflict("Termin je već zauzet.");
+
         var command = connection.CreateCommand();
         command.CommandText = "INSERT INTO Rezervacije (Ime, Datum, Vrijeme) VALUES ($ime, $datum, $vrijeme)";
         command.Parameters.AddWithValue("$ime", form.Ime);
         command.Parameters.AddWithValue("$datum", form.Datum);
         command.Parameters.AddWithValue("$vrijeme", form.Vrijeme);
+        command.ExecuteNonQuery();
+    }
+    return Results.Ok();
+});
+
+// DELETE: Brisanje rezervacije (za admina)
+app.MapDelete("/api/rezervacije/{id:int}", (int id) =>
+{
+    using (var connection = new SqliteConnection("Data Source=raspored.db"))
+    {
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM Rezervacije WHERE Id = $id";
+        command.Parameters.AddWithValue("$id", id);
         command.ExecuteNonQuery();
     }
     return Results.Ok();
