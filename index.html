@@ -18,7 +18,7 @@
     <h2>Rezervacija termina</h2>
     
     <label for="ime">Ime i prezime:</label>
-    <input type="text" id="ime" placeholder="Unesite vaše ime" required />
+    <input type="text" id="ime" placeholder="Unesite vaše ime" maxlength="100" required />
 
     <label for="datum">Datum:</label>
     <input type="date" id="datum" required />
@@ -41,20 +41,17 @@
         const datumInput = document.getElementById('datum');
         const vrijemeSelect = document.getElementById('vrijeme');
         
-        // Postavi minimalni datum na danas
-        datumInput.min = new Date().toISOString().split('T')[0];
+        // Postavi minimalni datum na danas (lokalni datum, ne UTC)
+        const sad = new Date();
+        datumInput.min = `${sad.getFullYear()}-${String(sad.getMonth() + 1).padStart(2, '0')}-${String(sad.getDate()).padStart(2, '0')}`;
 
         datumInput.addEventListener('change', async () => {
             const odabraniDatum = datumInput.value;
             if (!odabraniDatum) return;
 
-            const res = await fetch('/api/rezervacije');
-            const sveRezervacije = await res.json();
-            
-            // Nađi zauzeta vremena za odabrani datum
-            const zauzetiTermini = sveRezervacije
-                .filter(r => r.datum === odabraniDatum)
-                .map(r => r.vrijeme);
+            // Server vraća samo zauzeta vremena (bez imena klijenata)
+            const res = await fetch('/api/zauzeto?datum=' + encodeURIComponent(odabraniDatum));
+            const zauzetiTermini = await res.json();
 
             vrijemeSelect.innerHTML = '<option value="">-- Odaberite vrijeme --</option>';
             
