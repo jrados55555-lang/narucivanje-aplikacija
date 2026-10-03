@@ -8,9 +8,9 @@
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         html { -webkit-text-size-adjust: 100%; }
-
+ 
         :root { --logo: min(100vw, 340px); }
-
+ 
         /* Pozadina: logotip na vrhu, ista boja (#363435) ispod njega */
         body {
             margin: 0;
@@ -31,7 +31,7 @@
         .nav-btn { background: #d32f2f; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; min-height: 44px; }
         .nav-btn:hover { background: #b71c1c; }
         .nav-btn:active { background: #9a1515; }
-
+ 
         /* CSS Kalendar Grid */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
         .day-header { font-weight: bold; background: #413e3f; padding: 10px; border-radius: 6px; color: #ddd; }
@@ -40,16 +40,16 @@
         .day-card:active { border-color: #d32f2f; background-color: #413e3f; }
         .day-number { font-size: 14px; font-weight: bold; color: #fff; }
         .day-card.other-month { opacity: 0.3; cursor: default; }
-
+ 
         .badge { display: inline-block; margin-top: 8px; background: #d32f2f; color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; }
         .badge.zero { background: #2ecc71; opacity: 0.85; }
-
+ 
         /* Hover efekti samo na uređajima s mišem (ne na mobitelu) */
         @media (hover: hover) {
             .day-card:hover { border-color: #d32f2f; background-color: #413e3f; transform: translateY(-2px); }
             .day-card.other-month:hover { transform: none; background: #363435; border-color: #4d4a4b; }
         }
-
+ 
         /* Modal / Pop-up za detalje dana */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); justify-content: center; align-items: center; z-index: 100; }
         .modal-content { background: #2b2829; color: #fff; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; position: relative; }
@@ -62,28 +62,28 @@
         .termin-item:last-child { border-bottom: none; }
         .btn-obrisi { background: #d32f2f; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; min-height: 40px; flex-shrink: 0; }
         .btn-obrisi:hover { background: #b71c1c; }
-
+ 
         /* ===== MOBITEL ===== */
         @media (max-width: 600px) {
             body { padding: 8px; padding-top: calc(var(--logo) * 0.56 + 6px); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
             .container { padding: 12px 8px; border-radius: 10px; }
-
+ 
             .header { margin-bottom: 12px; padding: 0 4px; }
             .header h2 { font-size: 17px; flex: 1; }
             .nav-btn { padding: 8px 10px; font-size: 13px; }
-
+ 
             .calendar-grid { gap: 3px; }
             .day-header { padding: 6px 0; font-size: 11px; border-radius: 4px; }
-
+ 
             .day-card { min-height: 58px; padding: 4px; border-radius: 6px; }
             .day-number { font-size: 12px; }
-
+ 
             /* Oznaka: samo broj termina, a slobodan dan je mala zelena točka */
             .badge { margin-top: 4px; padding: 2px 6px; font-size: 12px; border-radius: 10px; }
             .badge .tx { display: none; }
             .badge.zero { width: 8px; height: 8px; padding: 0; border-radius: 50%; margin-top: 8px; }
             .badge.zero .br { display: none; }
-
+ 
             /* Pop-up kao donji "list" preko cijele širine */
             .modal { align-items: flex-end; }
             .modal-content {
@@ -100,19 +100,19 @@
     </style>
 </head>
 <body>
-
+ 
 <div class="container">
     <div class="header">
         <button class="nav-btn" onclick="promijeniMjesec(-1)">&lt; Prethodni</button>
         <h2 id="mjesecGodina"></h2>
         <button class="nav-btn" onclick="promijeniMjesec(1)">Sljedeći &gt;</button>
     </div>
-
+ 
     <div class="calendar-grid" id="kalendar">
         <!-- Generira JS -->
     </div>
 </div>
-
+ 
 <!-- Modal prozor za detalje odabranog dana -->
 <div class="modal" id="modal">
     <div class="modal-content">
@@ -121,16 +121,29 @@
         <div id="modalListaTermina"></div>
     </div>
 </div>
-
+ 
 <script>
     let danasnjiDatum = new Date();
     let trenutniMjesec = danasnjiDatum.getMonth();
     let trenutnaGodina = danasnjiDatum.getFullYear();
     let sveRezervacije = [];
-
+ 
     const naziviMjeseci = ["Siječanj", "Veljača", "Ožujak", "Travanj", "Svibanj", "Lipanj", "Srpanj", "Kolovoz", "Rujan", "Listopad", "Studeni", "Prosinac"];
     const daniTjedna = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
-
+ 
+    // Ukupan broj termina u danu (11:00 - 20:00 svakih 30 min = 19). Ako radno vrijeme promijeniš, promijeni i ovaj broj.
+    const UKUPNO_TERMINA = 19;
+ 
+    // 0 termina = zelena (rješava se u CSS-u), 1 termin = žuta, zatim narančasta, a pun dan = crvena
+    function bojaZaBrojTermina(n) {
+        const udio = Math.min(Math.max((n - 1) / (UKUPNO_TERMINA - 1), 0), 1); // 0 (1 termin) ... 1 (pun dan)
+        const nijansa = Math.round(50 - 50 * udio);                            // 50 = žuta, 0 = crvena
+        return {
+            pozadina: `hsl(${nijansa}, 90%, 46%)`,
+            tekst: nijansa > 28 ? '#222' : '#fff'                              // tamni tekst na žutoj radi čitljivosti
+        };
+    }
+ 
     async function ucitajPodatke() {
         try {
             const res = await fetch('/api/rezervacije');
@@ -140,12 +153,12 @@
             console.error("Greška pri dohvaćanju rezervacija:", err);
         }
     }
-
+ 
     function prikaziKalendar() {
         document.getElementById('mjesecGodina').textContent = `${naziviMjeseci[trenutniMjesec]} ${trenutnaGodina}.`;
         const kalendarGrid = document.getElementById('kalendar');
         kalendarGrid.innerHTML = '';
-
+ 
         // Zaglavlje za dane u tjednu
         daniTjedna.forEach(dan => {
             const el = document.createElement('div');
@@ -153,38 +166,38 @@
             el.textContent = dan;
             kalendarGrid.appendChild(el);
         });
-
+ 
         const prviDanMjeseca = new Date(trenutnaGodina, trenutniMjesec, 1).getDay();
         // Prilagodba za europske tjedne (Ponedjeljak = 0)
         let offset = prviDanMjeseca === 0 ? 6 : prviDanMjeseca - 1;
         const brojDanaUMjesecu = new Date(trenutnaGodina, trenutniMjesec + 1, 0).getDate();
-
+ 
         // Prazna polja prije prvog dana u mjesecu
         for (let i = 0; i < offset; i++) {
             const blank = document.createElement('div');
             blank.className = 'day-card other-month';
             kalendarGrid.appendChild(blank);
         }
-
+ 
         // Generiranje polja za svaki dan u mjesecu
         for (let dan = 1; dan <= brojDanaUMjesecu; dan++) {
             const m = String(trenutniMjesec + 1).padStart(2, '0');
             const d = String(dan).padStart(2, '0');
             const formatiraniDatum = `${trenutnaGodina}-${m}-${d}`;
-
+ 
             // Prebrojavanje termina za ovaj dan
             const terminiZaDan = sveRezervacije.filter(r => r.datum === formatiraniDatum);
             const brojTermina = terminiZaDan.length;
-
+ 
             const card = document.createElement('div');
             card.className = 'day-card';
             card.onclick = () => otvoriModalZaDan(formatiraniDatum, terminiZaDan);
-
+ 
             const labelaBroj = document.createElement('div');
             labelaBroj.className = 'day-number';
             labelaBroj.textContent = dan;
             card.appendChild(labelaBroj);
-
+ 
             // Oznaka se sastoji od broja (.br) i teksta (.tx); na mobitelu se tekst skriva
             const badge = document.createElement('div');
             const br = document.createElement('span');
@@ -193,6 +206,9 @@
             tx.className = 'tx';
             if (brojTermina > 0) {
                 badge.className = 'badge';
+                const boja = bojaZaBrojTermina(brojTermina);
+                badge.style.background = boja.pozadina;
+                badge.style.color = boja.tekst;
                 br.textContent = brojTermina;
                 tx.textContent = brojTermina > 1 ? ' termina' : ' termin';
             } else {
@@ -201,11 +217,11 @@
             }
             badge.append(br, tx);
             card.appendChild(badge);
-
+ 
             kalendarGrid.appendChild(card);
         }
     }
-
+ 
     function promijeniMjesec(smjer) {
         trenutniMjesec += smjer;
         if (trenutniMjesec < 0) {
@@ -217,46 +233,46 @@
         }
         prikaziKalendar();
     }
-
+ 
     function otvoriModalZaDan(datum, termini) {
         document.getElementById('modalNaslov').textContent = `Termini za: ${datum}`;
         const lista = document.getElementById('modalListaTermina');
         lista.innerHTML = '';
-
+ 
         if (termini.length === 0) {
             lista.innerHTML = '<p style="color:#bbb;">Nema zakazanih termina za ovaj dan.</p>';
         } else {
             termini.forEach(t => {
                 const item = document.createElement('div');
                 item.className = 'termin-item';
-
+ 
                 // textContent umjesto innerHTML, da se ime ne može izvršiti kao kod (XSS zaštita)
                 const info = document.createElement('div');
                 const vrijeme = document.createElement('strong');
                 vrijeme.textContent = t.vrijeme;
                 info.append(vrijeme, ' - ' + t.ime);
-
+ 
                 const btn = document.createElement('button');
                 btn.className = 'btn-obrisi';
                 btn.textContent = 'Obriši';
                 btn.onclick = () => obrisiTermin(t.id, datum);
-
+ 
                 item.append(info, btn);
                 lista.appendChild(item);
             });
         }
         document.getElementById('modal').style.display = 'flex';
     }
-
+ 
     function zatvoriModal() {
         document.getElementById('modal').style.display = 'none';
     }
-
+ 
     // Klik na tamnu pozadinu izvan prozora zatvara pop-up
     document.getElementById('modal').addEventListener('click', (e) => {
         if (e.target.id === 'modal') zatvoriModal();
     });
-
+ 
     async function obrisiTermin(id, datum) {
         if (confirm('Jeste li sigurni da želite obrisati ovaj termin?')) {
             await fetch(`/api/rezervacije/${id}`, { method: 'DELETE' });
@@ -264,9 +280,9 @@
             ucitajPodatke();
         }
     }
-
+ 
     ucitajPodatke();
 </script>
-
+ 
 </body>
 </html>
