@@ -161,12 +161,19 @@
             termini.forEach(t => {
                 const item = document.createElement('div');
                 item.className = 'termin-item';
-                item.innerHTML = `
-                    <div>
-                        <strong>${t.vrijeme}</strong> - ${t.ime}
-                    </div>
-                    <button class="btn-obrisi" onclick="obrisiTermin(${t.id}, '${datum}')">Obriši</button>
-                `;
+
+                // textContent umjesto innerHTML, da se ime ne može izvršiti kao kod (XSS zaštita)
+                const info = document.createElement('div');
+                const vrijeme = document.createElement('strong');
+                vrijeme.textContent = t.vrijeme;
+                info.append(vrijeme, ' - ' + t.ime);
+
+                const btn = document.createElement('button');
+                btn.className = 'btn-obrisi';
+                btn.textContent = 'Obriši';
+                btn.onclick = () => obrisiTermin(t.id, datum);
+
+                item.append(info, btn);
                 lista.appendChild(item);
             });
         }
