@@ -68,6 +68,8 @@
         .poruka.ok { background: #e8f5e9; color: #1b5e20; }
         .poruka.greska { background: #ffebee; color: #b71c1c; }
 
+        .napomena { margin: 6px 0 0; font-size: 13px; opacity: 0.85; }
+
         /* Cjenik */
         .cjenik {
             margin: 14px 0 6px;
@@ -121,6 +123,7 @@
 
         <label for="datum">Datum:</label>
         <input type="date" id="datum" required />
+        <p id="neradniNapomena" class="napomena" hidden></p>
 
         <label for="vrijeme" id="vrijemeLabel">Vrijeme:</label>
         <select id="vrijeme" required>
@@ -187,6 +190,14 @@
             if (radnoVrijeme.length > 0) {
                 document.getElementById('vrijemeLabel').textContent =
                     `Vrijeme (${radnoVrijeme[0]} - ${radnoVrijeme[radnoVrijeme.length - 1]}):`;
+            }
+
+            // Neradni dani u tjednu (npr. nedjelja)
+            const imenaDana = ['', 'ponedjeljkom', 'utorkom', 'srijedom', 'četvrtkom', 'petkom', 'subotom', 'nedjeljom'];
+            if (Array.isArray(p.neradniDani) && p.neradniDani.length > 0) {
+                const n = document.getElementById('neradniNapomena');
+                n.textContent = 'Ne radimo: ' + p.neradniDani.slice().sort((x, y) => x - y).map(d => imenaDana[d]).join(', ') + '.';
+                n.hidden = false;
             }
 
             // Cjenik (iz postavki salona); ako je prazan, ne prikazuje se
