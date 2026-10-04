@@ -59,6 +59,8 @@ var telegramChatId = Env("TELEGRAM_CHAT_ID", "");
 var korakMin = int.TryParse(Env("KORAK_MIN", "30"), out var k) ? k : 30;
 var radnoVrijeme = GenerirajTermine(Env("RADNO_OD", "11:00"), Env("RADNO_DO", "20:00"), korakMin);
 var trajanjeMin = (korakMin < 5 || korakMin > 240) ? 30 : korakMin;
+// Cjenik: stavke odvojene točkom-zarezom, oblik "Naziv=Cijena" (npr. Šišanje=20 €;Brijanje brade=10 €)
+var cjenik = ParsirajCjenik(Env("CJENIK", "Šišanje=20 €"));
 
 // Zaštita admina: admin stranica, popis svih rezervacija i brisanje traže lozinku
 app.Use(async (ctx, next) =>
@@ -232,7 +234,8 @@ app.MapGet("/api/postavke", () => Results.Ok(new
     boja,
     pozadina,
     logo,
-    termini = radnoVrijeme
+    termini = radnoVrijeme,
+    cjenik
 }));
 
 // JAVNO: stanje jednog dana (bez imena i telefona): je li dan zatvoren, koja su vremena zauzeta, a koja blokirana
@@ -554,6 +557,20 @@ static async Task PosaljiTelegram(IHttpClientFactory factory, string token, stri
 // Priprema tekst za .ics datoteku (posebni znakovi moraju imati kosu crtu ispred)
 static string IcsTekst(string t) =>
     t.Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,").Replace("\r", "").Replace("\n", "\\n");
+
+// Pretvara tekst "Šišanje=20 €;Brijanje=10 €" u popis stavki cjenika (najviše 30)
+static List<object> ParsirajCjenik(string tekst)
+{
+    var lista = new List<object>();
+    foreach (var dio in tekst.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    {
+        var i = dio.IndexOf('=');
+        if (i <= 0 || i == dio.Length - 1) continue;
+        lista.Add(new { naziv = dio[..i].Trim(), cijena = dio[(i + 1)..].Trim() });
+        if (lista.Count >= 30) break;
+    }
+    return lista;
+}
 
 // Prihvaća samo oblik #rrggbb, inače vraća zadanu boju
 static string Boja(string vrijednost, string zadano) =>
