@@ -188,17 +188,35 @@
             const odabraniDatum = datumInput.value;
             if (!odabraniDatum) return;
 
-            // Server vraća samo zauzeta vremena (bez imena klijenata)
-            const res = await fetch('/api/zauzeto?datum=' + encodeURIComponent(odabraniDatum));
-            const zauzetiTermini = await res.json();
+            // Server vraća stanje dana (bez imena klijenata): je li dan zatvoren te koja su vremena zauzeta ili blokirana
+            prikaziPoruku('', 'ok');
+            document.getElementById('kalendarBox').hidden = true;
+
+            let stanje;
+            try {
+                const res = await fetch('/api/zauzeto?datum=' + encodeURIComponent(odabraniDatum));
+                stanje = await res.json();
+            } catch (err) {
+                prikaziPoruku('Greška pri učitavanju termina. Pokušajte ponovno.', 'greska');
+                return;
+            }
+
+            if (stanje.zatvoren) {
+                vrijemeSelect.innerHTML = '<option value="">-- Taj dan nije moguće rezervirati --</option>';
+                prikaziPoruku('Na odabrani dan ne radimo. Molimo odaberite drugi datum.', 'greska');
+                return;
+            }
 
             vrijemeSelect.innerHTML = '<option value="">-- Odaberite vrijeme --</option>';
 
             radnoVrijeme.forEach(sat => {
                 const option = document.createElement('option');
                 option.value = sat;
-                if (zauzetiTermini.includes(sat)) {
+                if (stanje.zauzeto.includes(sat)) {
                     option.textContent = `${sat} (Zauzeto)`;
+                    option.disabled = true;
+                } else if (stanje.blokirano.includes(sat)) {
+                    option.textContent = `${sat} (Nedostupno)`;
                     option.disabled = true;
                 } else {
                     option.textContent = sat;
@@ -236,7 +254,7 @@
                 datumInput.value = '';
                 vrijemeSelect.innerHTML = '<option value="">-- Odaberite datum prvo --</option>';
             } else if (res.status === 409) {
-                prikaziPoruku('Termin je u međuvremenu zauzet.', 'greska');
+                prikaziPoruku('Termin je u međuvremenu zauzet ili nije dostupan. Odaberite drugi termin.', 'greska');
             } else if (res.status === 429) {
                 prikaziPoruku('Previše pokušaja. Pokušajte ponovno za nekoliko minuta.', 'greska');
             } else {
