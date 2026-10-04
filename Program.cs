@@ -61,6 +61,12 @@ var radnoVrijeme = GenerirajTermine(Env("RADNO_OD", "11:00"), Env("RADNO_DO", "2
 var trajanjeMin = (korakMin < 5 || korakMin > 240) ? 30 : korakMin;
 // Cjenik: stavke odvojene točkom-zarezom, oblik "Naziv=Cijena" (npr. Šišanje=20 €;Brijanje brade=10 €)
 var cjenik = ParsirajCjenik(Env("CJENIK", "Šišanje=20 €"));
+// Neradni dani u tjednu: brojevi 1 (ponedjeljak) do 7 (nedjelja) odvojeni zarezom, zadano je nedjelja. "nema" = radi se svaki dan
+var neradniDani = Env("NERADNI_DANI", "7")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Select(x => int.TryParse(x, out var n) ? n : 0)
+    .Where(n => n >= 1 && n <= 7)
+    .ToHashSet();
 
 // Zaštita admina: admin stranica, popis svih rezervacija i brisanje traže lozinku
 app.Use(async (ctx, next) =>
@@ -235,18 +241,20 @@ app.MapGet("/api/postavke", () => Results.Ok(new
     pozadina,
     logo,
     termini = radnoVrijeme,
-    cjenik
+    cjenik,
+    neradniDani = neradniDani.OrderBy(x => x).ToArray()
 }));
 
 // JAVNO: stanje jednog dana (bez imena i telefona): je li dan zatvoren, koja su vremena zauzeta, a koja blokirana
 app.MapGet("/api/zauzeto", (string datum) =>
 {
-    if (!DateOnly.TryParseExact(datum, "yyyy-MM-dd", out _))
+    if (!DateOnly.TryParseExact(datum, "yyyy-MM-dd", out var dan))
         return Results.BadRequest();
 
     using var connection = new SqliteConnection(connStr);
     connection.Open();
-    var zatvoren = Broji(connection, null, "SELECT COUNT(*) FROM Blokade WHERE Datum = $d AND Vrijeme = ''", ("$d", datum)) > 0;
+    var zatvoren = neradniDani.Contains(IsoDan(dan)) ||
+        Broji(connection, null, "SELECT COUNT(*) FROM Blokade WHERE Datum = $d AND Vrijeme = ''", ("$d", datum)) > 0;
     var zauzeto = Stupac(connection, "SELECT Vrijeme FROM Rezervacije WHERE Datum = $d", ("$d", datum));
     var blokirano = Stupac(connection, "SELECT Vrijeme FROM Blokade WHERE Datum = $d AND Vrijeme <> ''", ("$d", datum));
     return Results.Ok(new { zatvoren, zauzeto, blokirano });
@@ -295,6 +303,9 @@ app.MapPost("/api/rezervacije", async (HttpRequest request, IHttpClientFactory h
     var danas = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(2)); // otprilike hrvatsko vrijeme
     if (datum < danas)
         return Results.BadRequest("Datum je u prošlosti.");
+
+    if (neradniDani.Contains(IsoDan(datum)))
+        return Results.Conflict("Taj dan ne radimo.");
 
     if (!radnoVrijeme.Contains(form.Vrijeme))
         return Results.BadRequest("Neispravno vrijeme.");
@@ -475,6 +486,8 @@ app.MapPost("/api/admin/rezervacije", (RucnaRezervacijaDto dto) =>
         return Results.BadRequest("Neispravan datum.");
     if (datum < DateOnly.FromDateTime(DateTime.UtcNow.AddHours(2)))
         return Results.BadRequest("Datum je u prošlosti.");
+    if (neradniDani.Contains(IsoDan(datum)))
+        return Results.Conflict("Neradni dan.");
     if (!radnoVrijeme.Contains(dto.Vrijeme))
         return Results.BadRequest("Neispravno vrijeme.");
 
@@ -571,6 +584,9 @@ static List<object> ParsirajCjenik(string tekst)
     }
     return lista;
 }
+
+// Dan u tjednu kao broj: 1 = ponedjeljak ... 7 = nedjelja
+static int IsoDan(DateOnly d) => d.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)d.DayOfWeek;
 
 // Prihvaća samo oblik #rrggbb, inače vraća zadanu boju
 static string Boja(string vrijednost, string zadano) =>
