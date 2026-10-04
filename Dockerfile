@@ -8,6 +8,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/out .
 COPY --from=build /src/*.html ./wwwroot/
+COPY --from=build /src/logo*.png ./wwwroot/
 RUN mkdir -p /data
 ENV DB_PATH=/data/raspored.db
 EXPOSE 8080
