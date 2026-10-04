@@ -69,6 +69,10 @@
         .btn-obrisi { background: var(--accent); color: var(--accent-fg); border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; min-height: 40px; flex-shrink: 0; }
         .btn-obrisi:hover { filter: brightness(0.88); }
 
+        .odjava { text-align: center; margin: 16px 0 0; }
+        .odjava button { background: none; border: 1px solid var(--line); color: var(--fg); opacity: 0.75; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; min-height: 40px; }
+        .odjava button:hover { opacity: 1; }
+
         /* ===== MOBITEL ===== */
         @media (max-width: 600px) {
             body { padding: 8px; padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
@@ -125,6 +129,8 @@
         <!-- Generira JS -->
     </div>
 </div>
+
+<p class="odjava"><button type="button" onclick="odjava()">Odjava</button></p>
 
 <!-- Modal prozor za detalje odabranog dana -->
 <div class="modal" id="modal">
@@ -196,6 +202,7 @@
     async function ucitajPodatke() {
         try {
             const res = await fetch('/api/rezervacije');
+            if (res.status === 401) { location.href = '/prijava.html'; return; }
             sveRezervacije = await res.json();
             prikaziKalendar();
         } catch (err) {
@@ -335,10 +342,16 @@
 
     async function obrisiTermin(id, datum) {
         if (confirm('Jeste li sigurni da želite obrisati ovaj termin?')) {
-            await fetch(`/api/rezervacije/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/rezervacije/${id}`, { method: 'DELETE' });
+            if (res.status === 401) { location.href = '/prijava.html'; return; }
             zatvoriModal();
             ucitajPodatke();
         }
+    }
+
+    async function odjava() {
+        await fetch('/api/odjava', { method: 'POST' });
+        location.href = '/prijava.html';
     }
 
     // Omogućuje instalaciju admina na početni zaslon mobitela (PWA)
