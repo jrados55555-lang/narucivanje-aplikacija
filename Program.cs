@@ -1,20 +1,49 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
-var app = builder.Build();
 
-var dbPath = Environment.GetEnvironmentVariable("DB_PATH") ?? "raspored.db";
+// Render je "proxy" ispred aplikacije, pa ovako dobivamo pravu IP adresu posjetitelja
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    o.KnownNetworks.Clear();
+    o.KnownProxies.Clear();
+});
+
+// Zaštita od spama: najviše 10 pokušaja rezervacije u 10 minuta po IP adresi
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy("rezervacije", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "nepoznato",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(10)
+        }));
+});
+
+var app = builder.Build();
+app.UseForwardedHeaders();
+
+// ===== POSTAVKE (sve se mijenja preko Environment varijabli na hostingu, bez diranja koda) =====
+var dbPath = Env("DB_PATH", "raspored.db");
 var connStr = $"Data Source={dbPath}";
 var adminLozinka = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
 
-string[] radnoVrijeme =
-{
-    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-    "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"
-};
+var salonNaziv = Env("SALON_NAZIV", "Rezervacija termina");
+var salonTelefon = Env("SALON_TELEFON", "");
+var boja = Boja(Env("BOJA", "#d32f2f"), "#d32f2f");
+var pozadina = Boja(Env("POZADINA", "#363435"), "#363435");
+var logo = Env("LOGO_URL", "/logo.png");
+var korakMin = int.TryParse(Env("KORAK_MIN", "30"), out var k) ? k : 30;
+var radnoVrijeme = GenerirajTermine(Env("RADNO_OD", "11:00"), Env("RADNO_DO", "20:00"), korakMin);
 
 // Zaštita admina: admin stranica, popis svih rezervacija i brisanje traže lozinku
 app.Use(async (ctx, next) =>
@@ -36,6 +65,7 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
+app.UseRateLimiter();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -44,19 +74,50 @@ Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(dbPath))!);
 using (var connection = new SqliteConnection(connStr))
 {
     connection.Open();
+
     var command = connection.CreateCommand();
     command.CommandText = @"
         CREATE TABLE IF NOT EXISTS Rezervacije (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
             Ime TEXT NOT NULL,
             Datum TEXT NOT NULL,
-            Vrijeme TEXT NOT NULL
+            Vrijeme TEXT NOT NULL,
+            Telefon TEXT NOT NULL DEFAULT ''
         );
         CREATE UNIQUE INDEX IF NOT EXISTS ux_termin ON Rezervacije(Datum, Vrijeme);";
     command.ExecuteNonQuery();
+
+    // Ako je baza nastala u starijoj verziji (bez telefona), dodaj stupac Telefon
+    bool imaTelefon = false;
+    var info = connection.CreateCommand();
+    info.CommandText = "PRAGMA table_info(Rezervacije)";
+    using (var r = info.ExecuteReader())
+    {
+        while (r.Read())
+        {
+            if (r.GetString(1) == "Telefon") imaTelefon = true;
+        }
+    }
+    if (!imaTelefon)
+    {
+        var alter = connection.CreateCommand();
+        alter.CommandText = "ALTER TABLE Rezervacije ADD COLUMN Telefon TEXT NOT NULL DEFAULT ''";
+        alter.ExecuteNonQuery();
+    }
 }
 
-// JAVNO: samo zauzeta vremena za jedan datum (bez imena)
+// JAVNO: postavke salona (naziv, boje, logo, popis termina)
+app.MapGet("/api/postavke", () => Results.Ok(new
+{
+    naziv = salonNaziv,
+    telefon = salonTelefon,
+    boja,
+    pozadina,
+    logo,
+    termini = radnoVrijeme
+}));
+
+// JAVNO: samo zauzeta vremena za jedan datum (bez imena i telefona)
 app.MapGet("/api/zauzeto", (string datum) =>
 {
     var lista = new List<string>();
@@ -77,7 +138,7 @@ app.MapGet("/api/rezervacije", () =>
     using var connection = new SqliteConnection(connStr);
     connection.Open();
     var command = connection.CreateCommand();
-    command.CommandText = "SELECT Id, Ime, Datum, Vrijeme FROM Rezervacije ORDER BY Datum ASC, Vrijeme ASC";
+    command.CommandText = "SELECT Id, Ime, Datum, Vrijeme, Telefon FROM Rezervacije ORDER BY Datum ASC, Vrijeme ASC";
     using var reader = command.ExecuteReader();
     while (reader.Read())
     {
@@ -86,7 +147,8 @@ app.MapGet("/api/rezervacije", () =>
             id = reader.GetInt32(0),
             ime = reader.GetString(1),
             datum = reader.GetString(2),
-            vrijeme = reader.GetString(3)
+            vrijeme = reader.GetString(3),
+            telefon = reader.GetString(4)
         });
     }
     return Results.Ok(lista);
@@ -101,6 +163,10 @@ app.MapPost("/api/rezervacije", async (HttpRequest request) =>
     var ime = form.Ime?.Trim() ?? "";
     if (ime.Length == 0 || ime.Length > 100)
         return Results.BadRequest("Neispravno ime.");
+
+    var telefon = form.Telefon?.Trim() ?? "";
+    if (!Regex.IsMatch(telefon, @"^[0-9+\-\s()/]{6,20}$"))
+        return Results.BadRequest("Neispravan broj telefona.");
 
     if (!DateOnly.TryParseExact(form.Datum, "yyyy-MM-dd", out var datum))
         return Results.BadRequest("Neispravan datum.");
@@ -117,10 +183,11 @@ app.MapPost("/api/rezervacije", async (HttpRequest request) =>
         using var connection = new SqliteConnection(connStr);
         connection.Open();
         var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO Rezervacije (Ime, Datum, Vrijeme) VALUES ($ime, $datum, $vrijeme)";
+        command.CommandText = "INSERT INTO Rezervacije (Ime, Datum, Vrijeme, Telefon) VALUES ($ime, $datum, $vrijeme, $telefon)";
         command.Parameters.AddWithValue("$ime", ime);
         command.Parameters.AddWithValue("$datum", form.Datum);
         command.Parameters.AddWithValue("$vrijeme", form.Vrijeme);
+        command.Parameters.AddWithValue("$telefon", telefon);
         command.ExecuteNonQuery();
     }
     catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
@@ -128,7 +195,7 @@ app.MapPost("/api/rezervacije", async (HttpRequest request) =>
         return Results.Conflict("Termin je već zauzet.");
     }
     return Results.Ok();
-});
+}).RequireRateLimiting("rezervacije");
 
 // ADMIN: brisanje rezervacije
 app.MapDelete("/api/rezervacije/{id:int}", (int id) =>
@@ -143,6 +210,31 @@ app.MapDelete("/api/rezervacije/{id:int}", (int id) =>
 });
 
 app.Run();
+
+// ===== Pomoćne funkcije =====
+
+static string Env(string kljuc, string zadano)
+{
+    var v = Environment.GetEnvironmentVariable(kljuc);
+    return string.IsNullOrWhiteSpace(v) ? zadano : v.Trim();
+}
+
+// Prihvaća samo oblik #rrggbb, inače vraća zadanu boju
+static string Boja(string vrijednost, string zadano) =>
+    Regex.IsMatch(vrijednost, "^#[0-9a-fA-F]{6}$") ? vrijednost : zadano;
+
+// Napravi popis termina od "od" do "do" na svakih "korak" minuta
+static List<string> GenerirajTermine(string od, string doo, int korak)
+{
+    if (!TimeOnly.TryParseExact(od, "HH:mm", out var o)) o = new TimeOnly(11, 0);
+    if (!TimeOnly.TryParseExact(doo, "HH:mm", out var d)) d = new TimeOnly(20, 0);
+    if (korak < 5 || korak > 240) korak = 30;
+
+    var lista = new List<string>();
+    for (int m = o.Hour * 60 + o.Minute; m <= d.Hour * 60 + d.Minute; m += korak)
+        lista.Add($"{m / 60:00}:{m % 60:00}");
+    return lista;
+}
 
 static bool ProvjeriAdmina(HttpContext ctx, string? lozinka)
 {
@@ -167,4 +259,4 @@ static bool ProvjeriAdmina(HttpContext ctx, string? lozinka)
     }
 }
 
-record RezervacijaDto(string Ime, string Datum, string Vrijeme);
+record RezervacijaDto(string Ime, string Telefon, string Datum, string Vrijeme);
