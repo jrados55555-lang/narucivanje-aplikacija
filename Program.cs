@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -48,6 +49,7 @@ var telegramToken = Env("TELEGRAM_TOKEN", "");
 var telegramChatId = Env("TELEGRAM_CHAT_ID", "");
 var korakMin = int.TryParse(Env("KORAK_MIN", "30"), out var k) ? k : 30;
 var radnoVrijeme = GenerirajTermine(Env("RADNO_OD", "11:00"), Env("RADNO_DO", "20:00"), korakMin);
+var trajanjeMin = (korakMin < 5 || korakMin > 240) ? 30 : korakMin;
 
 // Zaštita admina: admin stranica, popis svih rezervacija i brisanje traže lozinku
 app.Use(async (ctx, next) =>
@@ -130,6 +132,47 @@ app.MapGet("/manifest.webmanifest", () => Results.Json(new
 
 // PWA: minimalni service worker (potreban da se aplikacija može instalirati; ništa ne sprema)
 app.MapGet("/sw.js", () => Results.Content("self.addEventListener('fetch', () => {});", "application/javascript"));
+
+// JAVNO: kalendarski događaj (.ics) s podsjetnicima, da klijent termin doda u svoj kalendar na mobitelu
+app.MapGet("/api/kalendar", (string datum, string vrijeme) =>
+{
+    if (!DateOnly.TryParseExact(datum, "yyyy-MM-dd", out var d) || !radnoVrijeme.Contains(vrijeme))
+        return Results.BadRequest();
+
+    var pocetak = d.ToDateTime(TimeOnly.ParseExact(vrijeme, "HH:mm"));
+    var kraj = pocetak.AddMinutes(trajanjeMin);
+    string F(DateTime t) => t.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture);
+    var pecat = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture);
+
+    var ics = string.Join("\r\n", new[]
+    {
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Rezervacije//HR",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        $"UID:{Guid.NewGuid():N}@rezervacije",
+        $"DTSTAMP:{pecat}",
+        $"DTSTART:{F(pocetak)}",
+        $"DTEND:{F(kraj)}",
+        $"SUMMARY:{IcsTekst(salonNaziv)} - termin",
+        "BEGIN:VALARM",
+        "TRIGGER:-P1D",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Sutra imate termin",
+        "END:VALARM",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT1H",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Termin je za sat vremena",
+        "END:VALARM",
+        "END:VEVENT",
+        "END:VCALENDAR",
+        ""
+    });
+    return Results.Content(ics, "text/calendar; charset=utf-8");
+});
 
 // JAVNO: postavke salona (naziv, boje, logo, popis termina)
 app.MapGet("/api/postavke", () => Results.Ok(new
@@ -266,6 +309,10 @@ static async Task PosaljiTelegram(IHttpClientFactory factory, string token, stri
         // namjerno ignoriramo greške: nedostupan Telegram ne smije pokvariti rezervaciju
     }
 }
+
+// Priprema tekst za .ics datoteku (posebni znakovi moraju imati kosu crtu ispred)
+static string IcsTekst(string t) =>
+    t.Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,").Replace("\r", "").Replace("\n", "\\n");
 
 // Prihvaća samo oblik #rrggbb, inače vraća zadanu boju
 static string Boja(string vrijednost, string zadano) =>
