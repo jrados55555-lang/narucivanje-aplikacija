@@ -68,6 +68,7 @@ app.Use(async (ctx, next) =>
 
     bool zasticeno =
         path.StartsWith("/admin") ||
+        path.StartsWith("/api/admin") ||
         (path == "/api/rezervacije" && method == "GET") ||
         (path.StartsWith("/api/rezervacije/") && method == "DELETE");
 
@@ -101,7 +102,15 @@ using (var connection = new SqliteConnection(connStr))
             Vrijeme TEXT NOT NULL,
             Telefon TEXT NOT NULL DEFAULT ''
         );
-        CREATE UNIQUE INDEX IF NOT EXISTS ux_termin ON Rezervacije(Datum, Vrijeme);";
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_termin ON Rezervacije(Datum, Vrijeme);
+
+        -- Blokade: Vrijeme = '' znači da je blokiran cijeli dan
+        CREATE TABLE IF NOT EXISTS Blokade (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Datum TEXT NOT NULL,
+            Vrijeme TEXT NOT NULL DEFAULT ''
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_blokada ON Blokade(Datum, Vrijeme);";
     command.ExecuteNonQuery();
 
     // Ako je baza nastala u starijoj verziji (bez telefona), dodaj stupac Telefon
@@ -226,18 +235,18 @@ app.MapGet("/api/postavke", () => Results.Ok(new
     termini = radnoVrijeme
 }));
 
-// JAVNO: samo zauzeta vremena za jedan datum (bez imena i telefona)
+// JAVNO: stanje jednog dana (bez imena i telefona): je li dan zatvoren, koja su vremena zauzeta, a koja blokirana
 app.MapGet("/api/zauzeto", (string datum) =>
 {
-    var lista = new List<string>();
+    if (!DateOnly.TryParseExact(datum, "yyyy-MM-dd", out _))
+        return Results.BadRequest();
+
     using var connection = new SqliteConnection(connStr);
     connection.Open();
-    var cmd = connection.CreateCommand();
-    cmd.CommandText = "SELECT Vrijeme FROM Rezervacije WHERE Datum = $datum";
-    cmd.Parameters.AddWithValue("$datum", datum);
-    using var reader = cmd.ExecuteReader();
-    while (reader.Read()) lista.Add(reader.GetString(0));
-    return Results.Ok(lista);
+    var zatvoren = Broji(connection, null, "SELECT COUNT(*) FROM Blokade WHERE Datum = $d AND Vrijeme = ''", ("$d", datum)) > 0;
+    var zauzeto = Stupac(connection, "SELECT Vrijeme FROM Rezervacije WHERE Datum = $d", ("$d", datum));
+    var blokirano = Stupac(connection, "SELECT Vrijeme FROM Blokade WHERE Datum = $d AND Vrijeme <> ''", ("$d", datum));
+    return Results.Ok(new { zatvoren, zauzeto, blokirano });
 });
 
 // ADMIN: popis svih rezervacija
@@ -291,6 +300,12 @@ app.MapPost("/api/rezervacije", async (HttpRequest request, IHttpClientFactory h
     {
         using var connection = new SqliteConnection(connStr);
         connection.Open();
+
+        // Provjera blokade (cijeli dan ili samo taj termin)
+        if (Broji(connection, null, "SELECT COUNT(*) FROM Blokade WHERE Datum = $d AND (Vrijeme = '' OR Vrijeme = $v)",
+                ("$d", form.Datum), ("$v", form.Vrijeme)) > 0)
+            return Results.Conflict("Termin nije dostupan.");
+
         var command = connection.CreateCommand();
         command.CommandText = "INSERT INTO Rezervacije (Ime, Datum, Vrijeme, Telefon) VALUES ($ime, $datum, $vrijeme, $telefon)";
         command.Parameters.AddWithValue("$ime", ime);
@@ -325,6 +340,159 @@ app.MapDelete("/api/rezervacije/{id:int}", (int id) =>
     return Results.Ok();
 });
 
+// ===== BLOKIRANJE TERMINA I RUČNI UPIS (samo admin) =====
+
+// ADMIN: popis svih blokada (vrijeme "" znači cijeli dan)
+app.MapGet("/api/admin/blokade", () =>
+{
+    var lista = new List<object>();
+    using var connection = new SqliteConnection(connStr);
+    connection.Open();
+    using var cmd = connection.CreateCommand();
+    cmd.CommandText = "SELECT Id, Datum, Vrijeme FROM Blokade ORDER BY Datum, Vrijeme";
+    using var reader = cmd.ExecuteReader();
+    while (reader.Read())
+        lista.Add(new { id = reader.GetInt32(0), datum = reader.GetString(1), vrijeme = reader.GetString(2) });
+    return Results.Ok(lista);
+});
+
+// ADMIN: blokiraj cijeli dan ili odabrane termine jednog dana
+app.MapPost("/api/admin/blokade", (BlokadaDto dto) =>
+{
+    if (!DateOnly.TryParseExact(dto.Datum, "yyyy-MM-dd", out _))
+        return Results.BadRequest("Neispravan datum.");
+
+    var vremena = dto.CijeliDan
+        ? new List<string> { "" }
+        : (dto.Vremena ?? new List<string>()).Where(v => radnoVrijeme.Contains(v)).Distinct().ToList();
+    if (vremena.Count == 0)
+        return Results.BadRequest("Nije odabran nijedan termin.");
+
+    using var connection = new SqliteConnection(connStr);
+    connection.Open();
+    foreach (var v in vremena)
+        Izvrsi(connection, null, "INSERT OR IGNORE INTO Blokade (Datum, Vrijeme) VALUES ($d, $v)", ("$d", dto.Datum), ("$v", v));
+    return Results.Ok();
+});
+
+// ADMIN: ukloni jednu blokadu (bez vremena = ponovno otvori cijeli dan)
+app.MapDelete("/api/admin/blokade", (string datum, string? vrijeme) =>
+{
+    using var connection = new SqliteConnection(connStr);
+    connection.Open();
+    Izvrsi(connection, null, "DELETE FROM Blokade WHERE Datum = $d AND Vrijeme = $v", ("$d", datum), ("$v", vrijeme ?? ""));
+    return Results.Ok();
+});
+
+// ADMIN: blokiraj ili ukloni blokade u razdoblju (godišnji odmor, svake nedjelje, pauza za ručak...)
+app.MapPost("/api/admin/blokade/raspon", (RasponDto dto) =>
+{
+    if (!DateOnly.TryParseExact(dto.OdDatuma, "yyyy-MM-dd", out var od) ||
+        !DateOnly.TryParseExact(dto.DoDatuma, "yyyy-MM-dd", out var doDatuma))
+        return Results.BadRequest("Neispravan datum.");
+    if (doDatuma < od)
+        return Results.BadRequest("Završni datum mora biti nakon početnog.");
+    if (doDatuma.DayNumber - od.DayNumber > 365)
+        return Results.BadRequest("Odjednom je moguće najviše 366 dana.");
+
+    var dani = dto.Dani is { Length: > 0 } ? dto.Dani.ToHashSet() : new HashSet<int> { 1, 2, 3, 4, 5, 6, 7 };
+
+    // Cijeli dan ("") ili samo termini od vrijemeOd (uključivo) do vrijemeDo (isključivo)
+    var vOd = dto.VrijemeOd ?? "";
+    var vDo = dto.VrijemeDo ?? "";
+    List<string> vremena;
+    if (dto.CijeliDan)
+    {
+        vremena = new List<string> { "" };
+    }
+    else
+    {
+        vremena = radnoVrijeme
+            .Where(t => string.CompareOrdinal(t, vOd) >= 0 && string.CompareOrdinal(t, vDo) < 0)
+            .ToList();
+        if (vremena.Count == 0)
+            return Results.BadRequest("Neispravan raspon vremena.");
+    }
+
+    int promijenjeno = 0, rezervacije = 0;
+    using var connection = new SqliteConnection(connStr);
+    connection.Open();
+    using var tx = connection.BeginTransaction();
+
+    for (var dan = od; dan <= doDatuma; dan = dan.AddDays(1))
+    {
+        var iso = dan.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)dan.DayOfWeek; // 1 = ponedjeljak ... 7 = nedjelja
+        if (!dani.Contains(iso)) continue;
+        var d = dan.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        if (dto.Ukloni)
+        {
+            if (dto.CijeliDan)
+            {
+                // "Cijeli dan" pri uklanjanju briše sve blokade tog dana
+                promijenjeno += Izvrsi(connection, tx, "DELETE FROM Blokade WHERE Datum = $d", ("$d", d));
+            }
+            else
+            {
+                foreach (var v in vremena)
+                    promijenjeno += Izvrsi(connection, tx, "DELETE FROM Blokade WHERE Datum = $d AND Vrijeme = $v", ("$d", d), ("$v", v));
+            }
+        }
+        else
+        {
+            foreach (var v in vremena)
+                promijenjeno += Izvrsi(connection, tx, "INSERT OR IGNORE INTO Blokade (Datum, Vrijeme) VALUES ($d, $v)", ("$d", d), ("$v", v));
+
+            // Koliko već postojećih rezervacija pada u blokirano razdoblje (samo za informaciju adminu)
+            if (dto.CijeliDan)
+                rezervacije += (int)Broji(connection, tx, "SELECT COUNT(*) FROM Rezervacije WHERE Datum = $d", ("$d", d));
+            else
+                rezervacije += (int)Broji(connection, tx,
+                    "SELECT COUNT(*) FROM Rezervacije WHERE Datum = $d AND Vrijeme >= $od AND Vrijeme < $do",
+                    ("$d", d), ("$od", vOd), ("$do", vDo));
+        }
+    }
+
+    tx.Commit();
+    return Results.Ok(new { promijenjeno, rezervacijaNaTimDanima = rezervacije });
+});
+
+// ADMIN: ručni upis klijenta (telefonom ili uživo), telefon nije obavezan
+app.MapPost("/api/admin/rezervacije", (RucnaRezervacijaDto dto) =>
+{
+    var ime = dto.Ime?.Trim() ?? "";
+    if (ime.Length == 0 || ime.Length > 100)
+        return Results.BadRequest("Neispravno ime.");
+
+    var telefon = dto.Telefon?.Trim() ?? "";
+    if (telefon.Length > 0 && !Regex.IsMatch(telefon, @"^[0-9+\-\s()/]{6,20}$"))
+        return Results.BadRequest("Neispravan broj telefona.");
+
+    if (!DateOnly.TryParseExact(dto.Datum, "yyyy-MM-dd", out var datum))
+        return Results.BadRequest("Neispravan datum.");
+    if (datum < DateOnly.FromDateTime(DateTime.UtcNow.AddHours(2)))
+        return Results.BadRequest("Datum je u prošlosti.");
+    if (!radnoVrijeme.Contains(dto.Vrijeme))
+        return Results.BadRequest("Neispravno vrijeme.");
+
+    try
+    {
+        using var connection = new SqliteConnection(connStr);
+        connection.Open();
+        if (Broji(connection, null, "SELECT COUNT(*) FROM Blokade WHERE Datum = $d AND (Vrijeme = '' OR Vrijeme = $v)",
+                ("$d", dto.Datum), ("$v", dto.Vrijeme)) > 0)
+            return Results.Conflict("Termin je blokiran.");
+
+        Izvrsi(connection, null, "INSERT INTO Rezervacije (Ime, Datum, Vrijeme, Telefon) VALUES ($ime, $d, $v, $t)",
+            ("$ime", ime), ("$d", dto.Datum), ("$v", dto.Vrijeme), ("$t", telefon));
+    }
+    catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
+    {
+        return Results.Conflict("Termin je već zauzet.");
+    }
+    return Results.Ok();
+});
+
 app.Run();
 
 // ===== Pomoćne funkcije =====
@@ -333,6 +501,38 @@ static string Env(string kljuc, string zadano)
 {
     var v = Environment.GetEnvironmentVariable(kljuc);
     return string.IsNullOrWhiteSpace(v) ? zadano : v.Trim();
+}
+
+// Izvrši SQL naredbu (INSERT/DELETE) s imenovanim parametrima; vraća broj promijenjenih redaka
+static int Izvrsi(SqliteConnection c, SqliteTransaction? tx, string sql, params (string Ime, object? Vrijednost)[] p)
+{
+    using var cmd = c.CreateCommand();
+    cmd.Transaction = tx;
+    cmd.CommandText = sql;
+    foreach (var (ime, v) in p) cmd.Parameters.AddWithValue(ime, v ?? DBNull.Value);
+    return cmd.ExecuteNonQuery();
+}
+
+// Izvrši SELECT COUNT(*) i vrati broj
+static long Broji(SqliteConnection c, SqliteTransaction? tx, string sql, params (string Ime, object? Vrijednost)[] p)
+{
+    using var cmd = c.CreateCommand();
+    cmd.Transaction = tx;
+    cmd.CommandText = sql;
+    foreach (var (ime, v) in p) cmd.Parameters.AddWithValue(ime, v ?? DBNull.Value);
+    return Convert.ToInt64(cmd.ExecuteScalar());
+}
+
+// Izvrši SELECT s jednim stupcem teksta i vrati popis
+static List<string> Stupac(SqliteConnection c, string sql, params (string Ime, object? Vrijednost)[] p)
+{
+    using var cmd = c.CreateCommand();
+    cmd.CommandText = sql;
+    foreach (var (ime, v) in p) cmd.Parameters.AddWithValue(ime, v ?? DBNull.Value);
+    var lista = new List<string>();
+    using var r = cmd.ExecuteReader();
+    while (r.Read()) lista.Add(r.GetString(0));
+    return lista;
 }
 
 // Šalje poruku preko Telegram bota
@@ -404,3 +604,6 @@ static bool ProvjeriAdmina(HttpContext ctx, string? lozinka)
 
 record RezervacijaDto(string Ime, string Telefon, string Datum, string Vrijeme);
 record PrijavaDto(string Lozinka);
+record BlokadaDto(string Datum, bool CijeliDan, List<string>? Vremena);
+record RasponDto(string OdDatuma, string DoDatuma, int[]? Dani, bool CijeliDan, string? VrijemeOd, string? VrijemeDo, bool Ukloni);
+record RucnaRezervacijaDto(string Ime, string? Telefon, string Datum, string Vrijeme);
