@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHttpClient();
 
 // Render je "proxy" ispred aplikacije, pa ovako dobivamo pravu IP adresu posjetitelja
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
@@ -42,6 +43,9 @@ var salonTelefon = Env("SALON_TELEFON", "");
 var boja = Boja(Env("BOJA", "#d32f2f"), "#d32f2f");
 var pozadina = Boja(Env("POZADINA", "#363435"), "#363435");
 var logo = Env("LOGO_URL", "/logo.png");
+// Telegram obavijesti (neobavezno): ako nisu postavljene, jednostavno se ne šalju
+var telegramToken = Env("TELEGRAM_TOKEN", "");
+var telegramChatId = Env("TELEGRAM_CHAT_ID", "");
 var korakMin = int.TryParse(Env("KORAK_MIN", "30"), out var k) ? k : 30;
 var radnoVrijeme = GenerirajTermine(Env("RADNO_OD", "11:00"), Env("RADNO_DO", "20:00"), korakMin);
 
@@ -106,6 +110,27 @@ using (var connection = new SqliteConnection(connStr))
     }
 }
 
+// PWA: opis aplikacije za instalaciju admina na početni zaslon mobitela
+app.MapGet("/manifest.webmanifest", () => Results.Json(new
+{
+    id = "/admin.html",
+    name = salonNaziv + " - Admin",
+    short_name = "Admin",
+    start_url = "/admin.html",
+    scope = "/",
+    display = "standalone",
+    background_color = pozadina,
+    theme_color = pozadina,
+    icons = new[]
+    {
+        new { src = "/icon-192.png", sizes = "192x192", type = "image/png", purpose = "any" },
+        new { src = "/icon-512.png", sizes = "512x512", type = "image/png", purpose = "any" }
+    }
+}, contentType: "application/manifest+json"));
+
+// PWA: minimalni service worker (potreban da se aplikacija može instalirati; ništa ne sprema)
+app.MapGet("/sw.js", () => Results.Content("self.addEventListener('fetch', () => {});", "application/javascript"));
+
 // JAVNO: postavke salona (naziv, boje, logo, popis termina)
 app.MapGet("/api/postavke", () => Results.Ok(new
 {
@@ -155,7 +180,7 @@ app.MapGet("/api/rezervacije", () =>
 });
 
 // JAVNO: nova rezervacija
-app.MapPost("/api/rezervacije", async (HttpRequest request) =>
+app.MapPost("/api/rezervacije", async (HttpRequest request, IHttpClientFactory httpFactory) =>
 {
     var form = await request.ReadFromJsonAsync<RezervacijaDto>();
     if (form == null) return Results.BadRequest();
@@ -194,6 +219,13 @@ app.MapPost("/api/rezervacije", async (HttpRequest request) =>
     {
         return Results.Conflict("Termin je već zauzet.");
     }
+
+    // Obavijest na Telegram (ne čekamo odgovor, a greška nikad ne ruši rezervaciju)
+    if (telegramToken != "" && telegramChatId != "")
+    {
+        var tekst = $"Nova rezervacija\n{ime}\nTel: {telefon}\n{datum:dd.MM.yyyy.} u {form.Vrijeme}";
+        _ = PosaljiTelegram(httpFactory, telegramToken, telegramChatId, tekst);
+    }
     return Results.Ok();
 }).RequireRateLimiting("rezervacije");
 
@@ -217,6 +249,22 @@ static string Env(string kljuc, string zadano)
 {
     var v = Environment.GetEnvironmentVariable(kljuc);
     return string.IsNullOrWhiteSpace(v) ? zadano : v.Trim();
+}
+
+// Šalje poruku preko Telegram bota
+static async Task PosaljiTelegram(IHttpClientFactory factory, string token, string chatId, string tekst)
+{
+    try
+    {
+        var client = factory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(10);
+        await client.PostAsJsonAsync($"https://api.telegram.org/bot{token}/sendMessage",
+            new { chat_id = chatId, text = tekst });
+    }
+    catch
+    {
+        // namjerno ignoriramo greške: nedostupan Telegram ne smije pokvariti rezervaciju
+    }
 }
 
 // Prihvaća samo oblik #rrggbb, inače vraća zadanu boju
