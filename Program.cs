@@ -29,6 +29,15 @@ builder.Services.AddRateLimiter(o =>
             PermitLimit = 10,
             Window = TimeSpan.FromMinutes(10)
         }));
+
+    // Zaštita od pogađanja lozinke: najviše 8 pokušaja prijave u 10 minuta po IP adresi
+    o.AddPolicy("prijava", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "nepoznato",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 8,
+            Window = TimeSpan.FromMinutes(10)
+        }));
 });
 
 var app = builder.Build();
@@ -64,8 +73,10 @@ app.Use(async (ctx, next) =>
 
     if (zasticeno && !ProvjeriAdmina(ctx, adminLozinka))
     {
-        ctx.Response.Headers.WWWAuthenticate = "Basic realm=\"Admin\"";
-        ctx.Response.StatusCode = 401;
+        if (path.StartsWith("/admin"))
+            ctx.Response.Redirect("/prijava.html");   // admin stranica: na prijavu
+        else
+            ctx.Response.StatusCode = 401;            // API pozivi: greška 401
         return;
     }
     await next();
@@ -111,6 +122,36 @@ using (var connection = new SqliteConnection(connStr))
         alter.ExecuteNonQuery();
     }
 }
+
+// JAVNO: prijava admina (lozinka se šalje jednom, a server postavi kolačić koji vrijedi 60 dana)
+app.MapPost("/api/prijava", (PrijavaDto dto, HttpContext ctx) =>
+{
+    if (string.IsNullOrEmpty(adminLozinka))
+        return Results.Problem("Lozinka admina nije postavljena na serveru.", statusCode: 503);
+
+    var uneseno = Encoding.UTF8.GetBytes(dto.Lozinka ?? "");
+    var ocekivano = Encoding.UTF8.GetBytes(adminLozinka);
+    if (!CryptographicOperations.FixedTimeEquals(uneseno, ocekivano))
+        return Results.Unauthorized();
+
+    var istek = DateTimeOffset.UtcNow.AddDays(60);
+    ctx.Response.Cookies.Append("admin_sesija", NapraviToken(adminLozinka, istek), new CookieOptions
+    {
+        HttpOnly = true,
+        Secure = ctx.Request.IsHttps,
+        SameSite = SameSiteMode.Lax,
+        Expires = istek,
+        Path = "/"
+    });
+    return Results.Ok();
+}).RequireRateLimiting("prijava");
+
+// Odjava admina
+app.MapPost("/api/odjava", (HttpContext ctx) =>
+{
+    ctx.Response.Cookies.Delete("admin_sesija");
+    return Results.Ok();
+});
 
 // PWA: opis aplikacije za instalaciju admina na početni zaslon mobitela
 app.MapGet("/manifest.webmanifest", () => Results.Json(new
@@ -331,27 +372,35 @@ static List<string> GenerirajTermine(string od, string doo, int korak)
     return lista;
 }
 
+// ===== Prijava admina: potpisani kolačić (vrijedi 60 dana, a promjena lozinke odjavljuje sve) =====
+
+static string Potpis(string podatak, string lozinka)
+{
+    using var h = new HMACSHA256(Encoding.UTF8.GetBytes(lozinka));
+    return Convert.ToHexString(h.ComputeHash(Encoding.UTF8.GetBytes(podatak)));
+}
+
+static string NapraviToken(string lozinka, DateTimeOffset istek)
+{
+    var exp = istek.ToUnixTimeSeconds().ToString();
+    return exp + "." + Potpis(exp, lozinka);
+}
+
 static bool ProvjeriAdmina(HttpContext ctx, string? lozinka)
 {
     if (string.IsNullOrEmpty(lozinka)) return false; // ako lozinka nije postavljena, admin je zaključan
 
-    var header = ctx.Request.Headers.Authorization.ToString();
-    if (!header.StartsWith("Basic ")) return false;
+    var token = ctx.Request.Cookies["admin_sesija"];
+    if (string.IsNullOrEmpty(token)) return false;
 
-    try
-    {
-        var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(header[6..]));
-        var idx = decoded.IndexOf(':');
-        if (idx < 0) return false;
+    var dijelovi = token.Split('.');
+    if (dijelovi.Length != 2 || !long.TryParse(dijelovi[0], out var istek)) return false;
+    if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > istek) return false;
 
-        var uneseno = Encoding.UTF8.GetBytes(decoded[(idx + 1)..]);
-        var ocekivano = Encoding.UTF8.GetBytes(lozinka);
-        return CryptographicOperations.FixedTimeEquals(uneseno, ocekivano);
-    }
-    catch
-    {
-        return false;
-    }
+    var ocekivano = Encoding.UTF8.GetBytes(Potpis(dijelovi[0], lozinka));
+    var dobiveno = Encoding.UTF8.GetBytes(dijelovi[1]);
+    return CryptographicOperations.FixedTimeEquals(ocekivano, dobiveno);
 }
 
 record RezervacijaDto(string Ime, string Telefon, string Datum, string Vrijeme);
+record PrijavaDto(string Lozinka);
