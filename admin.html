@@ -30,44 +30,92 @@
         .admin-oznaka { margin: 6px 0 0; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; }
 
         .container { max-width: 900px; margin: 0 auto; background: var(--panel); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.35); }
-        
+
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 8px; }
         .header h2 { margin: 0; text-align: center; }
         .nav-btn { background: var(--accent); color: var(--accent-fg); border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; min-height: 44px; }
         .nav-btn:hover { filter: brightness(0.88); }
         .nav-btn:active { filter: brightness(0.75); }
 
-        /* CSS Kalendar Grid */
+        /* Kalendar */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
         .day-header { font-weight: bold; background: var(--muted); padding: 10px; border-radius: 6px; }
-        
+
         .day-card { background: var(--bg); border: 1px solid var(--line); min-height: 85px; border-radius: 8px; padding: 8px; text-align: left; cursor: pointer; transition: all 0.2s; position: relative; min-width: 0; }
         .day-card:active { border-color: var(--accent); background-color: var(--muted); }
+        .day-card.zatvoren-dan { background: var(--muted); }
         .day-number { font-size: 14px; font-weight: bold; }
+        .lock { font-size: 11px; font-weight: normal; }
         .day-card.other-month { opacity: 0.3; cursor: default; }
 
         .badge { display: inline-block; margin-top: 8px; background: #d32f2f; color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; }
         .badge.zero { background: #2ecc71; color: #fff; opacity: 0.85; }
+        .badge.zatvoreno { background: #7b7b7b; color: #fff; }
 
-        /* Hover efekti samo na uređajima s mišem (ne na mobitelu) */
         @media (hover: hover) {
             .day-card:hover { border-color: var(--accent); background-color: var(--muted); transform: translateY(-2px); }
             .day-card.other-month:hover { transform: none; background: var(--bg); border-color: var(--line); }
         }
 
-        /* Modal / Pop-up za detalje dana */
+        .podnozje { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+        .legenda { font-size: 12px; opacity: 0.8; display: flex; gap: 12px; flex-wrap: wrap; }
+        .legenda span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; background: var(--c); }
+
+        /* Gumbi */
+        .btn { background: var(--accent); color: var(--accent-fg); border: 1px solid var(--accent); padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; min-height: 44px; }
+        .btn:hover { filter: brightness(0.88); }
+        .btn-sek { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+        .btn-sek:hover { filter: none; background: var(--muted); }
+        .btn-mali { min-height: 38px; padding: 6px 12px; font-size: 13px; flex-shrink: 0; }
+
+        /* Pop-up */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); justify-content: center; align-items: center; z-index: 100; }
-        .modal-content { background: var(--panel); color: var(--fg); padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; position: relative; }
-        .modal-content h3 { margin-top: 0; padding-right: 40px; }
+        .modal-content { background: var(--panel); color: var(--fg); padding: 22px; border-radius: 10px; width: 92%; max-width: 520px; max-height: 88vh; overflow-y: auto; position: relative; }
+        .modal-content h3 { margin: 0 0 12px; padding-right: 40px; }
         .close-btn { position: absolute; top: 8px; right: 8px; background: none; border: none; font-size: 26px; cursor: pointer; color: var(--fg); opacity: 0.7; width: 44px; height: 44px; }
         .close-btn:hover { opacity: 1; }
-        
-        .termin-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--line); gap: 10px; }
-        .termin-item > div { min-width: 0; word-break: break-word; }
-        .termin-item a { color: var(--fg); font-size: 14px; }
-        .termin-item:last-child { border-bottom: none; }
-        .btn-obrisi { background: var(--accent); color: var(--accent-fg); border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; min-height: 40px; flex-shrink: 0; }
-        .btn-obrisi:hover { filter: brightness(0.88); }
+
+        .alati { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .napomena { margin: 0 0 10px; font-size: 13px; opacity: 0.8; }
+
+        /* Popis termina u danu */
+        .slot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; min-height: 48px; border: 1px solid transparent; border-bottom-color: var(--line); }
+        .slot > .info { min-width: 0; word-break: break-word; flex: 1; }
+        .slot .vrijeme { display: inline-block; min-width: 52px; font-weight: bold; }
+        .slot .stanje { opacity: 0.75; font-size: 14px; }
+        .slot a { color: var(--fg); font-size: 14px; }
+        .slot.slobodan { cursor: pointer; }
+        .slot.slobodan.odabran { background: color-mix(in srgb, var(--accent) 30%, transparent); border-color: var(--accent); border-radius: 6px; }
+        .slot.slobodan.odabran .stanje::before { content: '✓ '; }
+        .slot.blokiran { background: repeating-linear-gradient(135deg, transparent 0 8px, var(--muted) 8px 16px); }
+        .slot.zatvoren { opacity: 0.5; }
+
+        /* Traka s radnjama za odabrane termine (ostaje vidljiva pri dnu pop-upa) */
+        .akcije { position: sticky; bottom: -22px; margin: 12px -22px -22px; padding: 12px 22px; background: var(--panel); border-top: 1px solid var(--line); }
+        .akcije.prazno { display: none; }
+        .akcije .odabrano { font-size: 13px; margin-bottom: 8px; opacity: 0.85; }
+        .akcije .red { display: flex; gap: 8px; margin-bottom: 8px; }
+        .akcije .red:last-child { margin-bottom: 0; }
+        .akcije input[type=text] { flex: 1; min-width: 0; }
+
+        /* Obrasci */
+        input[type=text], input[type=date], select {
+            width: 100%; padding: 10px; font-size: 16px; min-height: 44px;
+            border: 1px solid #bbb; border-radius: 6px; background: #fff; color: #222;
+        }
+        .polje { margin-bottom: 12px; }
+        .polje > label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 14px; }
+        .dva { display: flex; gap: 8px; }
+        .dva > * { flex: 1; min-width: 0; }
+        .dani { display: flex; flex-wrap: wrap; gap: 6px; }
+        .dani label { display: inline-flex; align-items: center; gap: 5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .brzi { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .opcija { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; }
+        .opcija input { width: 20px; height: 20px; }
+        #rasponPoruka { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: bold; }
+        #rasponPoruka:empty { display: none; }
+        #rasponPoruka.ok { background: #e8f5e9; color: #1b5e20; }
+        #rasponPoruka.greska { background: #ffebee; color: #b71c1c; }
 
         .odjava { text-align: center; margin: 16px 0 0; }
         .odjava button { background: none; border: 1px solid var(--line); color: var(--fg); opacity: 0.75; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; min-height: 40px; }
@@ -89,24 +137,26 @@
             .day-card { min-height: 58px; padding: 4px; border-radius: 6px; }
             .day-number { font-size: 12px; }
 
-            /* Oznaka: samo broj termina, a slobodan dan je mala zelena točka */
+            /* Oznaka: samo broj termina; slobodan ili zatvoren dan je mala točka */
             .badge { margin-top: 4px; padding: 2px 6px; font-size: 12px; border-radius: 10px; }
             .badge .tx { display: none; }
-            .badge.zero { width: 8px; height: 8px; padding: 0; border-radius: 50%; margin-top: 8px; }
-            .badge.zero .br { display: none; }
+            .badge.zero, .badge.zatvoreno.prazno { width: 8px; height: 8px; padding: 0; border-radius: 50%; margin-top: 8px; }
+            .badge.zero .br, .badge.zatvoreno.prazno .br { display: none; }
+
+            .podnozje { flex-direction: column; align-items: stretch; padding: 0 4px; }
+            .podnozje .btn { width: 100%; }
 
             /* Pop-up kao donji "list" preko cijele širine */
             .modal { align-items: flex-end; }
             .modal-content {
                 width: 100%;
                 max-width: none;
-                max-height: 85vh;
+                max-height: 90vh;
                 border-radius: 16px 16px 0 0;
-                padding: 20px 16px;
-                padding-bottom: max(20px, env(safe-area-inset-bottom));
+                padding: 18px 14px;
+                padding-bottom: max(18px, env(safe-area-inset-bottom));
             }
-            .termin-item { padding: 12px 4px; }
-            .btn-obrisi { padding: 10px 16px; }
+            .akcije { bottom: -18px; margin: 12px -14px -18px; padding: 12px 14px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
         }
     </style>
 </head>
@@ -128,16 +178,82 @@
     <div class="calendar-grid" id="kalendar">
         <!-- Generira JS -->
     </div>
+
+    <div class="podnozje">
+        <div class="legenda">
+            <span style="--c:#2ecc71">Slobodno</span>
+            <span style="--c:#f1c40f">Zauzeto (žuta do crvene)</span>
+            <span style="--c:#7b7b7b">Zatvoreno</span>
+            <span style="--c:transparent">🔒 dio dana blokiran</span>
+        </div>
+        <button class="btn btn-sek" onclick="otvoriRaspon()">Blokiraj više dana</button>
+    </div>
 </div>
 
 <p class="odjava"><button type="button" onclick="odjava()">Odjava</button></p>
 
-<!-- Modal prozor za detalje odabranog dana -->
+<!-- Pop-up: jedan dan -->
 <div class="modal" id="modal">
     <div class="modal-content">
         <button class="close-btn" onclick="zatvoriModal()" aria-label="Zatvori">&times;</button>
-        <h3 id="modalNaslov">Detalji termina</h3>
-        <div id="modalListaTermina"></div>
+        <h3 id="modalNaslov"></h3>
+        <div id="modalSadrzaj"></div>
+    </div>
+</div>
+
+<!-- Pop-up: blokiranje razdoblja -->
+<div class="modal" id="modalRaspon">
+    <div class="modal-content">
+        <button class="close-btn" onclick="zatvoriRaspon()" aria-label="Zatvori">&times;</button>
+        <h3>Blokiraj više dana</h3>
+
+        <div class="polje">
+            <label for="rasponAkcija">Radnja</label>
+            <select id="rasponAkcija">
+                <option value="blokiraj">Blokiraj (klijenti ne mogu rezervirati)</option>
+                <option value="ukloni">Ponovno otvori (ukloni blokade)</option>
+            </select>
+        </div>
+
+        <div class="polje">
+            <label>Razdoblje</label>
+            <div class="dva">
+                <input type="date" id="rasponOd" aria-label="Od datuma">
+                <input type="date" id="rasponDo" aria-label="Do datuma">
+            </div>
+        </div>
+
+        <div class="polje">
+            <label>Dani u tjednu</label>
+            <div class="dani" id="rasponDani">
+                <label><input type="checkbox" data-dan="1" checked> Pon</label>
+                <label><input type="checkbox" data-dan="2" checked> Uto</label>
+                <label><input type="checkbox" data-dan="3" checked> Sri</label>
+                <label><input type="checkbox" data-dan="4" checked> Čet</label>
+                <label><input type="checkbox" data-dan="5" checked> Pet</label>
+                <label><input type="checkbox" data-dan="6" checked> Sub</label>
+                <label><input type="checkbox" data-dan="7" checked> Ned</label>
+            </div>
+            <div class="brzi">
+                <button type="button" class="btn btn-sek btn-mali" onclick="odaberiDane([1,2,3,4,5,6,7])">Svi</button>
+                <button type="button" class="btn btn-sek btn-mali" onclick="odaberiDane([1,2,3,4,5])">Radni dani</button>
+                <button type="button" class="btn btn-sek btn-mali" onclick="odaberiDane([6,7])">Vikend</button>
+                <button type="button" class="btn btn-sek btn-mali" onclick="odaberiDane([7])">Nedjelja</button>
+            </div>
+        </div>
+
+        <div class="polje">
+            <label>Vrijeme</label>
+            <label class="opcija"><input type="radio" name="rasponVrijeme" value="cijeli" checked onchange="promijeniNacinVremena()"> Cijeli dan</label>
+            <label class="opcija"><input type="radio" name="rasponVrijeme" value="dio" onchange="promijeniNacinVremena()"> Samo dio dana (npr. pauza za ručak)</label>
+            <div id="rasponDio" class="dva" hidden>
+                <select id="rasponVrijemeOd" aria-label="Od vremena"></select>
+                <select id="rasponVrijemeDo" aria-label="Do vremena"></select>
+            </div>
+        </div>
+
+        <button class="btn" style="width:100%" onclick="pokusaj(primijeniRaspon)">Primijeni</button>
+        <div id="rasponPoruka"></div>
     </div>
 </div>
 
@@ -145,31 +261,78 @@
     let danasnjiDatum = new Date();
     let trenutniMjesec = danasnjiDatum.getMonth();
     let trenutnaGodina = danasnjiDatum.getFullYear();
+
+    let termini = [];                 // popis termina iz postavki salona
     let sveRezervacije = [];
+    let sveBlokade = [];
+    let rezPoDanu = {};               // { '2026-10-12': [rezervacije] }
+    let blokPoDanu = {};              // { '2026-10-12': { cijeliDan: bool, vremena: Set } }
+    let otvoreniDatum = null;         // dan koji je trenutno otvoren u pop-upu
+    const odabrani = new Set();       // termini označeni u pop-upu
+
+    // Ukupan broj termina u danu (dolazi iz postavki salona)
+    let UKUPNO_TERMINA = 19;
 
     const naziviMjeseci = ["Siječanj", "Veljača", "Ožujak", "Travanj", "Svibanj", "Lipanj", "Srpanj", "Kolovoz", "Rujan", "Listopad", "Studeni", "Prosinac"];
     const daniTjedna = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
+    const daniKratko = ["ned", "pon", "uto", "sri", "čet", "pet", "sub"];
 
-    // Ukupan broj termina u danu (dolazi iz postavki salona: radno vrijeme i korak)
-    let UKUPNO_TERMINA = 19;
+    // ---------- Pomoćne funkcije ----------
 
-    // 0 termina = zelena (rješava se u CSS-u), 1 termin = žuta, zatim narančasta, a pun dan = crvena
-    function bojaZaBrojTermina(n) {
-        const udio = UKUPNO_TERMINA > 1 ? Math.min(Math.max((n - 1) / (UKUPNO_TERMINA - 1), 0), 1) : 1;
-        const nijansa = Math.round(50 - 50 * udio);                            // 50 = žuta, 0 = crvena
-        return {
-            pozadina: `hsl(${nijansa}, 90%, 46%)`,
-            tekst: nijansa > 28 ? '#222' : '#fff'                              // tamni tekst na žutoj radi čitljivosti
-        };
+    function el(tag, cls, text) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
     }
 
-    // Koliko je boja svijetla (0 = crna, 1 = bijela)
+    // Poziv servera; ako sesija istekne, vrati na prijavu
+    async function api(url, opcije) {
+        const res = await fetch(url, opcije);
+        if (res.status === 401) {
+            location.href = '/prijava.html';
+            throw new Error('Nije prijavljen');
+        }
+        return res;
+    }
+
+    function saljiJson(url, tijelo, metoda = 'POST') {
+        return api(url, { method: metoda, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tijelo) });
+    }
+
+    // Izvrši radnju; greške prikaži kratkom porukom
+    async function pokusaj(fn) {
+        try {
+            await fn();
+        } catch (err) {
+            if (err.message !== 'Nije prijavljen') alert('Greška. Provjerite vezu i pokušajte ponovno.');
+        }
+    }
+
+    function hrDatum(iso) { return iso.split('-').reverse().join('.') + '.'; }
+    function danUTjednu(iso) { const [g, m, d] = iso.split('-').map(Number); return daniKratko[new Date(g, m - 1, d).getDay()]; }
+    function minute(vrijeme) { const [h, m] = vrijeme.split(':').map(Number); return h * 60 + m; }
+    function uVrijeme(min) { return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'); }
+    function danasISO() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    // 0 termina = zelena, 1 termin = žuta, zatim narančasta, a pun dan = crvena
+    function bojaZaBrojTermina(n) {
+        const udio = UKUPNO_TERMINA > 1 ? Math.min(Math.max((n - 1) / (UKUPNO_TERMINA - 1), 0), 1) : 1;
+        const nijansa = Math.round(50 - 50 * udio);
+        return { pozadina: `hsl(${nijansa}, 90%, 46%)`, tekst: nijansa > 28 ? '#222' : '#fff' };
+    }
+
     function osvjetljenje(hex) {
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
         const b = parseInt(hex.slice(5, 7), 16);
         return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     }
+
+    // ---------- Postavke i podaci ----------
 
     function primijeniPostavke(p) {
         const root = document.documentElement.style;
@@ -179,9 +342,9 @@
         root.setProperty('--accent-fg', osvjetljenje(p.boja) < 0.6 ? '#ffffff' : '#111111');
 
         document.title = p.naziv + ' - Admin';
+        termini = p.termini;
         UKUPNO_TERMINA = p.termini.length;
 
-        // Logo; ako ne postoji, prikaži naziv salona tekstom
         const logo = document.getElementById('logo');
         const naziv = document.getElementById('naziv');
         naziv.textContent = p.naziv;
@@ -201,72 +364,78 @@
 
     async function ucitajPodatke() {
         try {
-            const res = await fetch('/api/rezervacije');
-            if (res.status === 401) { location.href = '/prijava.html'; return; }
-            sveRezervacije = await res.json();
+            const [r1, r2] = await Promise.all([api('/api/rezervacije'), api('/api/admin/blokade')]);
+            sveRezervacije = await r1.json();
+            sveBlokade = await r2.json();
+            izgradiIndekse();
             prikaziKalendar();
         } catch (err) {
-            console.error("Greška pri dohvaćanju rezervacija:", err);
+            console.error("Greška pri dohvaćanju podataka:", err);
         }
     }
+
+    function izgradiIndekse() {
+        rezPoDanu = {};
+        blokPoDanu = {};
+        sveRezervacije.forEach(r => { (rezPoDanu[r.datum] = rezPoDanu[r.datum] || []).push(r); });
+        sveBlokade.forEach(b => {
+            const x = blokPoDanu[b.datum] = blokPoDanu[b.datum] || { cijeliDan: false, vremena: new Set() };
+            if (b.vrijeme === '') x.cijeliDan = true; else x.vremena.add(b.vrijeme);
+        });
+    }
+
+    // Nakon svake promjene: ponovno učitaj podatke i osvježi otvoreni dan
+    async function osvjezi() {
+        await ucitajPodatke();
+        if (otvoreniDatum && document.getElementById('modal').style.display === 'flex') prikaziDan();
+    }
+
+    // ---------- Kalendar ----------
 
     function prikaziKalendar() {
         document.getElementById('mjesecGodina').textContent = `${naziviMjeseci[trenutniMjesec]} ${trenutnaGodina}.`;
         const kalendarGrid = document.getElementById('kalendar');
         kalendarGrid.innerHTML = '';
 
-        // Zaglavlje za dane u tjednu
-        daniTjedna.forEach(dan => {
-            const el = document.createElement('div');
-            el.className = 'day-header';
-            el.textContent = dan;
-            kalendarGrid.appendChild(el);
-        });
+        daniTjedna.forEach(dan => kalendarGrid.appendChild(el('div', 'day-header', dan)));
 
         const prviDanMjeseca = new Date(trenutnaGodina, trenutniMjesec, 1).getDay();
-        // Prilagodba za europske tjedne (Ponedjeljak = 0)
-        let offset = prviDanMjeseca === 0 ? 6 : prviDanMjeseca - 1;
+        const offset = prviDanMjeseca === 0 ? 6 : prviDanMjeseca - 1;   // ponedjeljak = 0
         const brojDanaUMjesecu = new Date(trenutnaGodina, trenutniMjesec + 1, 0).getDate();
 
-        // Prazna polja prije prvog dana u mjesecu
-        for (let i = 0; i < offset; i++) {
-            const blank = document.createElement('div');
-            blank.className = 'day-card other-month';
-            kalendarGrid.appendChild(blank);
-        }
+        for (let i = 0; i < offset; i++) kalendarGrid.appendChild(el('div', 'day-card other-month'));
 
-        // Generiranje polja za svaki dan u mjesecu
         for (let dan = 1; dan <= brojDanaUMjesecu; dan++) {
             const m = String(trenutniMjesec + 1).padStart(2, '0');
             const d = String(dan).padStart(2, '0');
-            const formatiraniDatum = `${trenutnaGodina}-${m}-${d}`;
+            const datum = `${trenutnaGodina}-${m}-${d}`;
 
-            // Prebrojavanje termina za ovaj dan
-            const terminiZaDan = sveRezervacije.filter(r => r.datum === formatiraniDatum);
-            const brojTermina = terminiZaDan.length;
+            const rez = rezPoDanu[datum] || [];
+            const blok = blokPoDanu[datum];
+            const zatvoren = !!(blok && blok.cijeliDan);
 
-            const card = document.createElement('div');
-            card.className = 'day-card';
-            card.onclick = () => otvoriModalZaDan(formatiraniDatum, terminiZaDan);
+            const card = el('div', 'day-card' + (zatvoren ? ' zatvoren-dan' : ''));
+            card.onclick = () => otvoriDan(datum);
 
-            const labelaBroj = document.createElement('div');
-            labelaBroj.className = 'day-number';
-            labelaBroj.textContent = dan;
-            card.appendChild(labelaBroj);
+            const broj = el('div', 'day-number', dan);
+            if (blok && !zatvoren && blok.vremena.size > 0) broj.appendChild(el('span', 'lock', ' 🔒'));
+            card.appendChild(broj);
 
             // Oznaka se sastoji od broja (.br) i teksta (.tx); na mobitelu se tekst skriva
-            const badge = document.createElement('div');
-            const br = document.createElement('span');
-            br.className = 'br';
-            const tx = document.createElement('span');
-            tx.className = 'tx';
-            if (brojTermina > 0) {
+            const badge = el('div');
+            const br = el('span', 'br');
+            const tx = el('span', 'tx');
+            if (zatvoren) {
+                badge.className = 'badge zatvoreno' + (rez.length === 0 ? ' prazno' : '');
+                br.textContent = rez.length > 0 ? rez.length : '';
+                tx.textContent = rez.length > 0 ? ' rez. (zatvoreno)' : 'Zatvoreno';
+            } else if (rez.length > 0) {
                 badge.className = 'badge';
-                const boja = bojaZaBrojTermina(brojTermina);
+                const boja = bojaZaBrojTermina(rez.length);
                 badge.style.background = boja.pozadina;
                 badge.style.color = boja.tekst;
-                br.textContent = brojTermina;
-                tx.textContent = brojTermina > 1 ? ' termina' : ' termin';
+                br.textContent = rez.length;
+                tx.textContent = rez.length > 1 ? ' termina' : ' termin';
             } else {
                 badge.className = 'badge zero';
                 tx.textContent = 'Slobodno';
@@ -280,74 +449,270 @@
 
     function promijeniMjesec(smjer) {
         trenutniMjesec += smjer;
-        if (trenutniMjesec < 0) {
-            trenutniMjesec = 11;
-            trenutnaGodina--;
-        } else if (trenutniMjesec > 11) {
-            trenutniMjesec = 0;
-            trenutnaGodina++;
-        }
+        if (trenutniMjesec < 0) { trenutniMjesec = 11; trenutnaGodina--; }
+        else if (trenutniMjesec > 11) { trenutniMjesec = 0; trenutnaGodina++; }
         prikaziKalendar();
     }
 
-    function otvoriModalZaDan(datum, termini) {
-        document.getElementById('modalNaslov').textContent = `Termini za: ${datum}`;
-        const lista = document.getElementById('modalListaTermina');
-        lista.innerHTML = '';
+    // ---------- Pop-up jednog dana ----------
 
-        if (termini.length === 0) {
-            const p = document.createElement('p');
-            p.style.opacity = '0.7';
-            p.textContent = 'Nema zakazanih termina za ovaj dan.';
-            lista.appendChild(p);
-        } else {
-            termini.forEach(t => {
-                const item = document.createElement('div');
-                item.className = 'termin-item';
-
-                // textContent umjesto innerHTML, da se ime ne može izvršiti kao kod (XSS zaštita)
-                const info = document.createElement('div');
-                const vrijeme = document.createElement('strong');
-                vrijeme.textContent = t.vrijeme;
-                info.append(vrijeme, ' - ' + t.ime);
-
-                // Telefon klijenta: dodir ga odmah poziva
-                if (t.telefon) {
-                    const a = document.createElement('a');
-                    a.href = 'tel:' + t.telefon.replace(/[^\d+]/g, '');
-                    a.textContent = t.telefon;
-                    info.append(document.createElement('br'), a);
-                }
-
-                const btn = document.createElement('button');
-                btn.className = 'btn-obrisi';
-                btn.textContent = 'Obriši';
-                btn.onclick = () => obrisiTermin(t.id, datum);
-
-                item.append(info, btn);
-                lista.appendChild(item);
-            });
-        }
+    function otvoriDan(datum) {
+        otvoreniDatum = datum;
+        odabrani.clear();
         document.getElementById('modal').style.display = 'flex';
+        prikaziDan();
     }
 
     function zatvoriModal() {
         document.getElementById('modal').style.display = 'none';
+        otvoreniDatum = null;
+    }
+
+    function prikaziDan() {
+        const datum = otvoreniDatum;
+        const rezDan = rezPoDanu[datum] || [];
+        const blok = blokPoDanu[datum] || { cijeliDan: false, vremena: new Set() };
+
+        document.getElementById('modalNaslov').textContent = `${danUTjednu(datum)}, ${hrDatum(datum)}`;
+        const sadrzaj = document.getElementById('modalSadrzaj');
+        sadrzaj.innerHTML = '';
+
+        // Gumbi na vrhu: zatvori/otvori dan i označi sve slobodne
+        const alati = el('div', 'alati');
+        const btnDan = el('button', blok.cijeliDan ? 'btn' : 'btn btn-sek', blok.cijeliDan ? 'Otvori dan' : 'Zatvori cijeli dan');
+        btnDan.onclick = () => pokusaj(() => blok.cijeliDan ? otvoriCijeliDan(datum) : zatvoriCijeliDan(datum));
+        alati.appendChild(btnDan);
+        if (!blok.cijeliDan) {
+            const btnSve = el('button', 'btn btn-sek', 'Označi sve slobodne');
+            btnSve.onclick = () => {
+                termini.forEach(t => { if (!rezDan.some(r => r.vrijeme === t) && !blok.vremena.has(t)) odabrani.add(t); });
+                osvjeziOdabir();
+            };
+            alati.appendChild(btnSve);
+        }
+        sadrzaj.appendChild(alati);
+
+        if (blok.cijeliDan) sadrzaj.appendChild(el('p', 'napomena', 'Dan je zatvoren: klijenti ne mogu rezervirati.'));
+        else sadrzaj.appendChild(el('p', 'napomena', 'Dodirni slobodne termine da ih označiš, pa ih blokiraj ili upiši klijenta.'));
+
+        // Popis svih termina
+        const lista = el('div', 'slotovi');
+        termini.forEach(sat => {
+            const rez = rezDan.find(r => r.vrijeme === sat);
+            lista.appendChild(napraviRed(datum, sat, rez, blok));
+        });
+        // Rezervacije izvan trenutnog radnog vremena (npr. ako je radno vrijeme kasnije promijenjeno)
+        rezDan.filter(r => !termini.includes(r.vrijeme)).forEach(r => lista.appendChild(napraviRed(datum, r.vrijeme, r, blok)));
+        sadrzaj.appendChild(lista);
+
+        const akcije = el('div', 'akcije prazno');
+        akcije.id = 'akcije';
+        sadrzaj.appendChild(akcije);
+        osvjeziAkcije();
+    }
+
+    function napraviRed(datum, sat, rez, blok) {
+        const red = el('div', 'slot');
+        const info = el('div', 'info');
+        info.appendChild(el('span', 'vrijeme', sat));
+
+        if (rez) {
+            red.classList.add('zauzet');
+            info.append(rez.ime);                         // textContent: ime se ne može izvršiti kao kod (XSS zaštita)
+            if (rez.telefon) {
+                const a = el('a', null, rez.telefon);
+                a.href = 'tel:' + rez.telefon.replace(/[^\d+]/g, '');
+                info.append(document.createElement('br'), el('span', 'vrijeme'), a);
+            }
+            red.appendChild(info);
+            const btn = el('button', 'btn btn-mali', 'Obriši');
+            btn.onclick = () => pokusaj(() => obrisiTermin(rez.id));
+            red.appendChild(btn);
+        } else if (blok.vremena.has(sat)) {
+            red.classList.add('blokiran');
+            info.appendChild(el('span', 'stanje', 'Blokirano'));
+            red.appendChild(info);
+            const btn = el('button', 'btn btn-sek btn-mali', 'Otvori');
+            btn.onclick = () => pokusaj(() => deblokiraj(datum, sat));
+            red.appendChild(btn);
+        } else if (blok.cijeliDan) {
+            red.classList.add('zatvoren');
+            info.appendChild(el('span', 'stanje', 'Zatvoreno'));
+            red.appendChild(info);
+        } else {
+            red.classList.add('slobodan');
+            red.dataset.v = sat;
+            info.appendChild(el('span', 'stanje', 'Slobodno'));
+            red.appendChild(info);
+            red.onclick = () => {
+                if (odabrani.has(sat)) odabrani.delete(sat); else odabrani.add(sat);
+                osvjeziOdabir();
+            };
+        }
+        return red;
+    }
+
+    function osvjeziOdabir() {
+        document.querySelectorAll('.slot.slobodan').forEach(r => r.classList.toggle('odabran', odabrani.has(r.dataset.v)));
+        osvjeziAkcije();
+    }
+
+    function osvjeziAkcije() {
+        const box = document.getElementById('akcije');
+        if (!box) return;
+        box.innerHTML = '';
+        const n = odabrani.size;
+        box.classList.toggle('prazno', n === 0);
+        if (n === 0) return;
+
+        box.appendChild(el('div', 'odabrano', 'Odabrano: ' + [...odabrani].sort().join(', ')));
+
+        const red = el('div', 'red');
+        const bBlok = el('button', 'btn', `Blokiraj (${n})`);
+        bBlok.onclick = () => pokusaj(blokirajOdabrano);
+        const bPonisti = el('button', 'btn btn-sek', 'Poništi');
+        bPonisti.onclick = () => { odabrani.clear(); osvjeziOdabir(); };
+        red.append(bBlok, bPonisti);
+        box.appendChild(red);
+
+        // Ručni upis klijenta (telefonom ili uživo) moguć je kad je označen točno jedan termin
+        if (n === 1) {
+            const red2 = el('div', 'red');
+            const inp = el('input');
+            inp.type = 'text';
+            inp.id = 'imeKlijenta';
+            inp.placeholder = 'Ime klijenta (ručni upis)';
+            inp.maxLength = 100;
+            const bUpisi = el('button', 'btn', 'Upiši');
+            bUpisi.onclick = () => pokusaj(upisiKlijenta);
+            red2.append(inp, bUpisi);
+            box.appendChild(red2);
+        }
+    }
+
+    // ---------- Radnje u pop-upu ----------
+
+    async function zatvoriCijeliDan(datum) {
+        const n = (rezPoDanu[datum] || []).length;
+        if (n > 0 && !confirm(`Na ovaj dan već ima rezervacija: ${n}. Zatvoriti dan svejedno? Postojeće rezervacije ostaju, a klijente morate sami obavijestiti.`)) return;
+        const res = await saljiJson('/api/admin/blokade', { datum, cijeliDan: true, vremena: [] });
+        if (!res.ok) alert('Blokiranje nije uspjelo.');
+        await osvjezi();
+    }
+
+    async function otvoriCijeliDan(datum) {
+        await api(`/api/admin/blokade?datum=${encodeURIComponent(datum)}&vrijeme=`, { method: 'DELETE' });
+        await osvjezi();
+    }
+
+    async function deblokiraj(datum, vrijeme) {
+        await api(`/api/admin/blokade?datum=${encodeURIComponent(datum)}&vrijeme=${encodeURIComponent(vrijeme)}`, { method: 'DELETE' });
+        await osvjezi();
+    }
+
+    async function blokirajOdabrano() {
+        const vremena = [...odabrani].sort();
+        const res = await saljiJson('/api/admin/blokade', { datum: otvoreniDatum, cijeliDan: false, vremena });
+        if (!res.ok) alert('Blokiranje nije uspjelo.');
+        odabrani.clear();
+        await osvjezi();
+    }
+
+    async function upisiKlijenta() {
+        const ime = document.getElementById('imeKlijenta').value.trim();
+        if (!ime) { alert('Upišite ime klijenta.'); return; }
+        const vrijeme = [...odabrani][0];
+        const res = await saljiJson('/api/admin/rezervacije', { ime, telefon: '', datum: otvoreniDatum, vrijeme });
+        if (!res.ok) alert(res.status === 409 ? 'Termin je u međuvremenu zauzet ili blokiran.' : 'Upis nije uspio. Provjerite podatke.');
+        odabrani.clear();
+        await osvjezi();
+    }
+
+    async function obrisiTermin(id) {
+        if (!confirm('Jeste li sigurni da želite obrisati ovaj termin?')) return;
+        await api(`/api/rezervacije/${id}`, { method: 'DELETE' });
+        await osvjezi();
+    }
+
+    // ---------- Pop-up: blokiranje razdoblja ----------
+
+    function otvoriRaspon() {
+        const od = document.getElementById('rasponVrijemeOd');
+        const kraj = document.getElementById('rasponVrijemeDo');
+        if (od.options.length === 0 && termini.length > 0) {
+            const korak = termini.length > 1 ? minute(termini[1]) - minute(termini[0]) : 30;
+            termini.forEach(t => od.add(new Option(t, t)));
+            // "do" je isključivo: 13:00 do 14:00 blokira termine 13:00 i 13:30
+            termini.slice(1).forEach(t => kraj.add(new Option(t, t)));
+            const zadnje = uVrijeme(minute(termini[termini.length - 1]) + korak);
+            kraj.add(new Option(zadnje, zadnje));
+        }
+        document.getElementById('rasponAkcija').value = 'blokiraj';
+        document.getElementById('rasponOd').value = danasISO();
+        document.getElementById('rasponDo').value = '';
+        odaberiDane([1, 2, 3, 4, 5, 6, 7]);
+        document.querySelector('input[name=rasponVrijeme][value=cijeli]').checked = true;
+        promijeniNacinVremena();
+        const poruka = document.getElementById('rasponPoruka');
+        poruka.textContent = '';
+        poruka.className = '';
+        document.getElementById('modalRaspon').style.display = 'flex';
+    }
+
+    function zatvoriRaspon() {
+        document.getElementById('modalRaspon').style.display = 'none';
+    }
+
+    function odaberiDane(popis) {
+        document.querySelectorAll('#rasponDani input').forEach(i => { i.checked = popis.includes(Number(i.dataset.dan)); });
+    }
+
+    function promijeniNacinVremena() {
+        const dio = document.querySelector('input[name=rasponVrijeme]:checked').value === 'dio';
+        document.getElementById('rasponDio').hidden = !dio;
+    }
+
+    async function primijeniRaspon() {
+        const poruka = document.getElementById('rasponPoruka');
+        const prikazi = (tekst, vrsta) => { poruka.textContent = tekst; poruka.className = vrsta; };
+
+        const odDatuma = document.getElementById('rasponOd').value;
+        const doDatuma = document.getElementById('rasponDo').value || odDatuma;
+        if (!odDatuma) { prikazi('Odaberite početni datum.', 'greska'); return; }
+
+        const dani = [...document.querySelectorAll('#rasponDani input:checked')].map(i => Number(i.dataset.dan));
+        if (dani.length === 0) { prikazi('Odaberite barem jedan dan u tjednu.', 'greska'); return; }
+
+        const cijeliDan = document.querySelector('input[name=rasponVrijeme]:checked').value === 'cijeli';
+        const ukloni = document.getElementById('rasponAkcija').value === 'ukloni';
+
+        const res = await saljiJson('/api/admin/blokade/raspon', {
+            odDatuma, doDatuma, dani, cijeliDan, ukloni,
+            vrijemeOd: document.getElementById('rasponVrijemeOd').value,
+            vrijemeDo: document.getElementById('rasponVrijemeDo').value
+        });
+
+        if (!res.ok) {
+            const t = await res.json().catch(() => null);
+            prikazi(typeof t === 'string' ? t : 'Greška. Provjerite unesene podatke.', 'greska');
+            return;
+        }
+
+        const p = await res.json();
+        if (ukloni) {
+            prikazi(`Uklonjeno blokada: ${p.promijenjeno}.`, 'ok');
+        } else {
+            let tekst = `Dodano blokada: ${p.promijenjeno}.`;
+            if (p.rezervacijaNaTimDanima > 0)
+                tekst += ` Pažnja: u tom razdoblju već postoji rezervacija: ${p.rezervacijaNaTimDanima}. One ostaju, a klijente obavijestite sami.`;
+            prikazi(tekst, 'ok');
+        }
+        await ucitajPodatke();
     }
 
     // Klik na tamnu pozadinu izvan prozora zatvara pop-up
-    document.getElementById('modal').addEventListener('click', (e) => {
-        if (e.target.id === 'modal') zatvoriModal();
-    });
-
-    async function obrisiTermin(id, datum) {
-        if (confirm('Jeste li sigurni da želite obrisati ovaj termin?')) {
-            const res = await fetch(`/api/rezervacije/${id}`, { method: 'DELETE' });
-            if (res.status === 401) { location.href = '/prijava.html'; return; }
-            zatvoriModal();
-            ucitajPodatke();
-        }
-    }
+    document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') zatvoriModal(); });
+    document.getElementById('modalRaspon').addEventListener('click', (e) => { if (e.target.id === 'modalRaspon') zatvoriRaspon(); });
 
     async function odjava() {
         await fetch('/api/odjava', { method: 'POST' });
@@ -359,7 +724,7 @@
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // Prvo postavke (boje, broj termina), pa tek onda rezervacije
+    // Prvo postavke (boje, popis termina), pa tek onda rezervacije i blokade
     ucitajPostavke().then(ucitajPodatke);
 </script>
 
