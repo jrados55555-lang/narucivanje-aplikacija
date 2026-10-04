@@ -68,6 +68,20 @@
         .poruka.ok { background: #e8f5e9; color: #1b5e20; }
         .poruka.greska { background: #ffebee; color: #b71c1c; }
 
+        /* Cjenik */
+        .cjenik {
+            margin: 14px 0 6px;
+            padding: 12px 14px;
+            border: 1px solid color-mix(in srgb, var(--fg) 25%, var(--bg));
+            border-radius: 8px;
+            background: color-mix(in srgb, var(--bg) 88%, black);
+        }
+        .cjenik h3 { margin: 0 0 8px; font-size: 16px; text-align: center; letter-spacing: 1px; text-transform: uppercase; }
+        .cjenik ul { list-style: none; margin: 0; padding: 0; }
+        .cjenik li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed color-mix(in srgb, var(--fg) 25%, var(--bg)); }
+        .cjenik li:last-child { border-bottom: none; }
+        .cjenik li strong { white-space: nowrap; }
+
         /* Gumb "Dodaj u kalendar" nakon uspješne rezervacije */
         .kalendar-box { margin-top: 14px; text-align: center; }
         .gumb-link {
@@ -93,6 +107,11 @@
 
         <h2>Rezervacija termina</h2>
         <p id="salonTel" class="tel" hidden></p>
+
+        <div id="cjenik" class="cjenik" hidden>
+            <h3>Cjenik</h3>
+            <ul id="cjenikLista"></ul>
+        </div>
 
         <label for="ime">Ime i prezime:</label>
         <input type="text" id="ime" placeholder="Unesite vaše ime" maxlength="100" autocomplete="name" required />
@@ -168,6 +187,22 @@
             if (radnoVrijeme.length > 0) {
                 document.getElementById('vrijemeLabel').textContent =
                     `Vrijeme (${radnoVrijeme[0]} - ${radnoVrijeme[radnoVrijeme.length - 1]}):`;
+            }
+
+            // Cjenik (iz postavki salona); ako je prazan, ne prikazuje se
+            if (Array.isArray(p.cjenik) && p.cjenik.length > 0) {
+                const lista = document.getElementById('cjenikLista');
+                lista.innerHTML = '';
+                p.cjenik.forEach(stavka => {
+                    const li = document.createElement('li');
+                    const naziv = document.createElement('span');
+                    naziv.textContent = stavka.naziv;
+                    const cijena = document.createElement('strong');
+                    cijena.textContent = stavka.cijena;
+                    li.append(naziv, cijena);
+                    lista.appendChild(li);
+                });
+                document.getElementById('cjenik').hidden = false;
             }
         }
 
