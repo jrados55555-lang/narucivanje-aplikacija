@@ -51,6 +51,8 @@
         .badge { display: inline-block; margin-top: 8px; background: #d32f2f; color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; }
         .badge.zero { background: #2ecc71; color: #fff; opacity: 0.85; }
         .badge.zatvoreno { background: #7b7b7b; color: #fff; }
+        /* Neradni dan (npr. nedjelja): obični tekst, bez obojane oznake */
+        .badge.neradni { display: block; background: transparent; color: var(--fg); opacity: 0.65; padding: 0; margin-top: 6px; font-size: 12px; font-weight: normal; line-height: 1.2; border-radius: 0; }
 
         @media (hover: hover) {
             .day-card:hover { border-color: var(--accent); background-color: var(--muted); transform: translateY(-2px); }
@@ -140,6 +142,8 @@
             /* Oznaka: samo broj termina; slobodan ili zatvoren dan je mala točka */
             .badge { margin-top: 4px; padding: 2px 6px; font-size: 12px; border-radius: 10px; }
             .badge .tx { display: none; }
+            .badge.neradni { font-size: 9px; margin-top: 4px; }
+            .badge.neradni .tx { display: inline; }
             .badge.zero, .badge.zatvoreno.prazno { width: 8px; height: 8px; padding: 0; border-radius: 50%; margin-top: 8px; }
             .badge.zero .br, .badge.zatvoreno.prazno .br { display: none; }
 
@@ -262,6 +266,7 @@
     let trenutniMjesec = danasnjiDatum.getMonth();
     let trenutnaGodina = danasnjiDatum.getFullYear();
 
+    let neradniDani = new Set();      // dani u tjednu kad se ne radi (1 = ponedjeljak ... 7 = nedjelja)
     let termini = [];                 // popis termina iz postavki salona
     let sveRezervacije = [];
     let sveBlokade = [];
@@ -309,6 +314,13 @@
         }
     }
 
+    // Je li taj datum neradni dan u tjednu (npr. nedjelja)?
+    function jeNeradni(iso) {
+        const [g, m, d] = iso.split('-').map(Number);
+        const w = new Date(g, m - 1, d).getDay();     // 0 = nedjelja
+        return neradniDani.has(w === 0 ? 7 : w);
+    }
+
     function hrDatum(iso) { return iso.split('-').reverse().join('.') + '.'; }
     function danUTjednu(iso) { const [g, m, d] = iso.split('-').map(Number); return daniKratko[new Date(g, m - 1, d).getDay()]; }
     function minute(vrijeme) { const [h, m] = vrijeme.split(':').map(Number); return h * 60 + m; }
@@ -343,6 +355,7 @@
 
         document.title = p.naziv + ' - Admin';
         termini = p.termini;
+        neradniDani = new Set(p.neradniDani || []);
         UKUPNO_TERMINA = p.termini.length;
 
         const logo = document.getElementById('logo');
@@ -412,9 +425,10 @@
 
             const rez = rezPoDanu[datum] || [];
             const blok = blokPoDanu[datum];
-            const zatvoren = !!(blok && blok.cijeliDan);
+            const neradni = jeNeradni(datum);
+            const zatvoren = !neradni && !!(blok && blok.cijeliDan);
 
-            const card = el('div', 'day-card' + (zatvoren ? ' zatvoren-dan' : ''));
+            const card = el('div', 'day-card' + ((zatvoren || neradni) ? ' zatvoren-dan' : ''));
             card.onclick = () => otvoriDan(datum);
 
             const broj = el('div', 'day-number', dan);
@@ -425,7 +439,10 @@
             const badge = el('div');
             const br = el('span', 'br');
             const tx = el('span', 'tx');
-            if (zatvoren) {
+            if (neradni) {
+                badge.className = 'badge neradni';
+                tx.textContent = rez.length > 0 ? `Neradni dan (${rez.length})` : 'Neradni dan';
+            } else if (zatvoren) {
                 badge.className = 'badge zatvoreno' + (rez.length === 0 ? ' prazno' : '');
                 br.textContent = rez.length > 0 ? rez.length : '';
                 tx.textContent = rez.length > 0 ? ' rez. (zatvoreno)' : 'Zatvoreno';
@@ -471,7 +488,10 @@
     function prikaziDan() {
         const datum = otvoreniDatum;
         const rezDan = rezPoDanu[datum] || [];
-        const blok = blokPoDanu[datum] || { cijeliDan: false, vremena: new Set() };
+        const neradni = jeNeradni(datum);
+        const blokDb = blokPoDanu[datum] || { cijeliDan: false, vremena: new Set() };
+        // Neradni dan ponaša se kao zatvoren dan, ali ga admin ne može otvoriti
+        const blok = { cijeliDan: blokDb.cijeliDan || neradni, vremena: blokDb.vremena };
 
         document.getElementById('modalNaslov').textContent = `${danUTjednu(datum)}, ${hrDatum(datum)}`;
         const sadrzaj = document.getElementById('modalSadrzaj');
@@ -479,9 +499,11 @@
 
         // Gumbi na vrhu: zatvori/otvori dan i označi sve slobodne
         const alati = el('div', 'alati');
-        const btnDan = el('button', blok.cijeliDan ? 'btn' : 'btn btn-sek', blok.cijeliDan ? 'Otvori dan' : 'Zatvori cijeli dan');
-        btnDan.onclick = () => pokusaj(() => blok.cijeliDan ? otvoriCijeliDan(datum) : zatvoriCijeliDan(datum));
-        alati.appendChild(btnDan);
+        if (!neradni) {
+            const btnDan = el('button', blok.cijeliDan ? 'btn' : 'btn btn-sek', blok.cijeliDan ? 'Otvori dan' : 'Zatvori cijeli dan');
+            btnDan.onclick = () => pokusaj(() => blok.cijeliDan ? otvoriCijeliDan(datum) : zatvoriCijeliDan(datum));
+            alati.appendChild(btnDan);
+        }
         if (!blok.cijeliDan) {
             const btnSve = el('button', 'btn btn-sek', 'Označi sve slobodne');
             btnSve.onclick = () => {
@@ -490,9 +512,10 @@
             };
             alati.appendChild(btnSve);
         }
-        sadrzaj.appendChild(alati);
+        if (alati.children.length > 0) sadrzaj.appendChild(alati);
 
-        if (blok.cijeliDan) sadrzaj.appendChild(el('p', 'napomena', 'Dan je zatvoren: klijenti ne mogu rezervirati.'));
+        if (neradni) sadrzaj.appendChild(el('p', 'napomena', 'Neradni dan: klijenti ne mogu rezervirati.'));
+        else if (blok.cijeliDan) sadrzaj.appendChild(el('p', 'napomena', 'Dan je zatvoren: klijenti ne mogu rezervirati.'));
         else sadrzaj.appendChild(el('p', 'napomena', 'Dodirni slobodne termine da ih označiš, pa ih blokiraj ili upiši klijenta.'));
 
         // Popis svih termina
