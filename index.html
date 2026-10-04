@@ -67,6 +67,22 @@
         .poruka:empty { display: none; }
         .poruka.ok { background: #e8f5e9; color: #1b5e20; }
         .poruka.greska { background: #ffebee; color: #b71c1c; }
+
+        /* Gumb "Dodaj u kalendar" nakon uspješne rezervacije */
+        .kalendar-box { margin-top: 14px; text-align: center; }
+        .gumb-link {
+            display: block;
+            padding: 12px;
+            min-height: 48px;
+            line-height: 24px;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            color: var(--fg);
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .gumb-link:active { background: var(--accent); color: var(--accent-fg); }
+        .kalendar-napomena { margin: 8px 0 0; font-size: 13px; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -94,6 +110,11 @@
 
         <button id="btnSpremi">Potvrdi rezervaciju</button>
         <div id="poruka" class="poruka"></div>
+
+        <div id="kalendarBox" class="kalendar-box" hidden>
+            <a id="kalendarLink" class="gumb-link" href="#">Dodaj u kalendar (s podsjetnikom)</a>
+            <p class="kalendar-napomena">Termin će vam se upisati u kalendar na mobitelu, da ga ne zaboravite.</p>
+        </div>
     </div>
 
     <script>
@@ -191,6 +212,7 @@
             const telefon = document.getElementById('telefon').value;
             const datum = datumInput.value;
             const vrijeme = vrijemeSelect.value;
+            document.getElementById('kalendarBox').hidden = true;
 
             if (!ime || !telefon || !datum || !vrijeme) {
                 prikaziPoruku('Molimo ispunite sva polja!', 'greska');
@@ -204,7 +226,11 @@
             });
 
             if (res.ok) {
-                prikaziPoruku('Uspješno ste rezervirali termin!', 'ok');
+                const datumHr = datum.split('-').reverse().join('.') + '.';
+                prikaziPoruku(`Uspješno ste rezervirali termin: ${datumHr} u ${vrijeme}`, 'ok');
+                document.getElementById('kalendarLink').href =
+                    `/api/kalendar?datum=${encodeURIComponent(datum)}&vrijeme=${encodeURIComponent(vrijeme)}`;
+                document.getElementById('kalendarBox').hidden = false;
                 document.getElementById('ime').value = '';
                 document.getElementById('telefon').value = '';
                 datumInput.value = '';
