@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Admin - Rezervacije</title>
     <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Admin">
@@ -122,6 +122,7 @@
         .odjava { text-align: center; margin: 16px 0 0; }
         .odjava button { background: none; border: 1px solid var(--line); color: var(--fg); opacity: 0.75; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; min-height: 40px; }
         .odjava button:hover { opacity: 1; }
+        .odjava button + button { margin-left: 8px; }
 
         /* ===== MOBITEL ===== */
         @media (max-width: 600px) {
@@ -194,7 +195,7 @@
     </div>
 </div>
 
-<p class="odjava"><button type="button" onclick="odjava()">Odjava</button></p>
+<p class="odjava"><button type="button" onclick="ucitajPodatke()">Osvježi</button><button type="button" onclick="odjava()">Odjava</button></p>
 
 <!-- Pop-up: jedan dan -->
 <div class="modal" id="modal">
@@ -746,6 +747,16 @@
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
+
+    // Automatsko osvježavanje: svakih 30 sekundi i čim se aplikacija vrati u prvi plan,
+    // ali samo dok nijedan pop-up nije otvoren (da se ne prekine rad u pop-upu)
+    function mozeSeOsvjeziti() {
+        return document.visibilityState === 'visible' &&
+            document.getElementById('modal').style.display !== 'flex' &&
+            document.getElementById('modalRaspon').style.display !== 'flex';
+    }
+    setInterval(() => { if (mozeSeOsvjeziti()) ucitajPodatke(); }, 30000);
+    document.addEventListener('visibilitychange', () => { if (mozeSeOsvjeziti()) ucitajPodatke(); });
 
     // Prvo postavke (boje, popis termina), pa tek onda rezervacije i blokade
     ucitajPostavke().then(ucitajPodatke);
