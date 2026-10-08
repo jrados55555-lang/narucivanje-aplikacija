@@ -123,6 +123,9 @@
         .odjava button { background: none; border: 1px solid var(--line); color: var(--fg); opacity: 0.75; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; min-height: 40px; }
         .odjava button:hover { opacity: 1; }
         .odjava button + button { margin-left: 8px; }
+        .odjava .veza-gumb { display: inline-block; margin-left: 8px; background: none; border: 1px solid var(--line); color: var(--fg); opacity: 0.75; padding: 9px 18px; border-radius: 6px; font-size: 13px; text-decoration: none; min-height: 40px; line-height: 20px; vertical-align: top; }
+        .odjava .veza-gumb:hover { opacity: 1; }
+        .odjava .veza-gumb + button { margin-left: 8px; }
 
         /* ===== MOBITEL ===== */
         @media (max-width: 600px) {
@@ -195,7 +198,7 @@
     </div>
 </div>
 
-<p class="odjava"><button type="button" onclick="ucitajPodatke()">Osvježi</button><button type="button" onclick="odjava()">Odjava</button></p>
+<p class="odjava"><button type="button" onclick="ucitajPodatke()">Osvježi</button><a href="/admin-klijenti.html" class="veza-gumb">Klijenti</a><button type="button" onclick="odjava()">Odjava</button></p>
 
 <!-- Pop-up: jedan dan -->
 <div class="modal" id="modal">
