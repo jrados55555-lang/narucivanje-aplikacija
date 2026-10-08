@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Admin - Klijenti</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        html { -webkit-text-size-adjust: 100%; }
+        [hidden] { display: none !important; }
+
+        /* Boje se postavljaju iz postavki salona (JS ih mijenja) */
+        :root {
+            --bg: #363435; --fg: #ffffff; --accent: #d32f2f; --accent-fg: #ffffff;
+            --panel: color-mix(in srgb, var(--bg) 85%, black);
+            --muted: color-mix(in srgb, var(--fg) 12%, var(--bg));
+            --line: color-mix(in srgb, var(--fg) 22%, var(--bg));
+        }
+
+        body { margin: 0; padding: 20px; min-height: 100vh; background: var(--bg); color: var(--fg); }
+        .brand { text-align: center; margin: 0 auto 14px; }
+        .logo { display: block; margin: 0 auto; max-width: min(70%, 260px); max-height: 110px; height: auto; }
+        .naziv { margin: 0; font-size: 24px; }
+        .admin-oznaka { margin: 6px 0 0; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; }
+
+        .container { max-width: 700px; margin: 0 auto; background: var(--panel); padding: 22px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35); }
+        .vrh { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .vrh h2 { margin: 0; }
+        .nazad { color: var(--fg); font-size: 14px; }
+
+        .trazi { width: 100%; padding: 12px; font-size: 16px; min-height: 46px; border: 1px solid #bbb; border-radius: 6px; background: #fff; color: #222; margin-bottom: 10px; }
+
+        .klijent { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+        .klijent:last-child { border-bottom: none; }
+        .klijent .podaci { min-width: 0; word-break: break-word; }
+        .klijent .ime { font-weight: bold; }
+        .klijent a { color: var(--fg); font-size: 14px; }
+        .akcije { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn { background: var(--accent); color: var(--accent-fg); border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; min-height: 40px; }
+        .btn:hover { filter: brightness(0.88); }
+        .btn-sek { background: none; color: var(--fg); border: 1px solid var(--line); }
+
+        .rezultat { background: #e8f5e9; color: #1b5e20; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        .rezultat strong { font-size: 20px; letter-spacing: 1px; user-select: all; }
+        .rezultat .btn { margin-top: 8px; margin-right: 6px; background: #1b5e20; color: #fff; }
+        .poruka { padding: 10px; border-radius: 6px; margin-bottom: 12px; background: #ffebee; color: #b71c1c; font-weight: bold; }
+        .poruka:empty { display: none; }
+        .prazno { opacity: 0.75; padding: 14px 0; }
+        .broj { font-size: 13px; opacity: 0.75; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="brand">
+    <img id="logo" class="logo" alt="" hidden>
+    <h1 id="naziv" class="naziv" hidden></h1>
+    <p class="admin-oznaka">Admin</p>
+</div>
+
+<div class="container">
+    <div class="vrh">
+        <h2>Klijenti</h2>
+        <a class="nazad" href="/admin.html">&larr; Natrag na kalendar</a>
+    </div>
+
+    <div id="poruka" class="poruka"></div>
+
+    <div id="rezultat" class="rezultat" hidden>
+        <div id="rezultatTekst"></div>
+        <strong id="rezultatLozinka"></strong>
+        <div>
+            <button type="button" class="btn" id="btnKopiraj">Kopiraj</button>
+            <button type="button" class="btn" id="btnZatvori">Zatvori</button>
+        </div>
+    </div>
+
+    <input type="search" id="trazi" class="trazi" placeholder="Traži po imenu ili telefonu">
+    <div id="broj" class="broj"></div>
+    <div id="lista"></div>
+</div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+
+    function el(tag, klasa, tekst) {
+        const e = document.createElement(tag);
+        if (klasa) e.className = klasa;
+        if (tekst !== undefined) e.textContent = tekst;
+        return e;
+    }
+
+    let klijenti = [];
+
+    // Koliko je boja svijetla (0 = crna, 1 = bijela)
+    function osvjetljenje(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    }
+
+    async function ucitajPostavke() {
+        try {
+            const res = await fetch('/api/postavke');
+            const p = await res.json();
+            const root = document.documentElement.style;
+            root.setProperty('--bg', p.pozadina);
+            root.setProperty('--fg', osvjetljenje(p.pozadina) < 0.55 ? '#ffffff' : '#222222');
+            root.setProperty('--accent', p.boja);
+            root.setProperty('--accent-fg', osvjetljenje(p.boja) < 0.6 ? '#ffffff' : '#111111');
+            document.title = p.naziv + ' - Klijenti';
+
+            const logo = $('logo');
+            const naziv = $('naziv');
+            naziv.textContent = p.naziv;
+            logo.onload = () => { logo.hidden = false; };
+            logo.onerror = () => { naziv.hidden = false; };
+            logo.src = p.logo;
+        } catch (err) {
+            console.error('Greška pri dohvaćanju postavki:', err);
+        }
+    }
+
+    async function api(url, opcije) {
+        const res = await fetch(url, opcije);
+        if (res.status === 401) { location.href = '/prijava.html'; throw new Error('Nema prijave'); }
+        let tijelo = null;
+        try { tijelo = await res.json(); } catch (err) { /* nema JSON-a */ }
+        return { ok: res.ok, status: res.status, tijelo };
+    }
+
+    function prikaziPoruku(tekst) { $('poruka').textContent = tekst || ''; }
+
+    async function ucitaj() {
+        prikaziPoruku('');
+        try {
+            const r = await api('/api/admin/klijenti');
+            if (!r.ok) { prikaziPoruku('Greška pri učitavanju klijenata.'); return; }
+            klijenti = r.tijelo;
+            crtaj();
+        } catch (err) {
+            if (err.message !== 'Nema prijave') prikaziPoruku('Nema veze s poslužiteljem.');
+        }
+    }
+
+    function crtaj() {
+        const upit = $('trazi').value.trim().toLowerCase();
+        const brojke = upit.replace(/\D/g, '');
+        const lista = $('lista');
+        lista.innerHTML = '';
+
+        const prikaz = klijenti.filter(k =>
+            upit === '' ||
+            k.ime.toLowerCase().includes(upit) ||
+            (brojke !== '' && (k.telefon.replace(/\D/g, '').includes(brojke) || k.id.includes(brojke))));
+
+        $('broj').textContent = `Ukupno računa: ${klijenti.length}` + (upit ? ` (prikazano: ${prikaz.length})` : '');
+
+        if (prikaz.length === 0) {
+            lista.appendChild(el('div', 'prazno', klijenti.length === 0 ? 'Još nema registriranih klijenata.' : 'Nema rezultata.'));
+            return;
+        }
+
+        prikaz.forEach(k => {
+            const red = el('div', 'klijent');
+            const podaci = el('div', 'podaci');
+            podaci.appendChild(el('div', 'ime', k.ime));
+            const tel = el('a', '', k.telefon);
+            tel.href = 'tel:' + k.telefon.replace(/[^\d+]/g, '');
+            podaci.appendChild(tel);
+
+            const akcije = el('div', 'akcije');
+            const nova = el('button', 'btn', 'Nova lozinka');
+            nova.type = 'button';
+            nova.addEventListener('click', () => novaLozinka(k));
+            const brisi = el('button', 'btn btn-sek', 'Obriši račun');
+            brisi.type = 'button';
+            brisi.addEventListener('click', () => obrisi(k));
+            akcije.append(nova, brisi);
+
+            red.append(podaci, akcije);
+            lista.appendChild(red);
+        });
+    }
+
+    async function novaLozinka(k) {
+        if (!confirm(`Postaviti novu privremenu lozinku za ${k.ime}? Stara lozinka prestaje vrijediti.`)) return;
+        try {
+            const r = await api('/api/admin/klijenti/lozinka', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: k.id })
+            });
+            if (!r.ok) { prikaziPoruku('Lozinka nije promijenjena.'); return; }
+            prikaziPoruku('');
+            $('rezultatTekst').textContent = `Nova lozinka za ${k.ime} (javite je klijentu, neka je promijeni u Moj profil):`;
+            $('rezultatLozinka').textContent = r.tijelo.lozinka;
+            $('rezultat').hidden = false;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) {
+            if (err.message !== 'Nema prijave') prikaziPoruku('Nema veze s poslužiteljem.');
+        }
+    }
+
+    async function obrisi(k) {
+        if (!confirm(`Obrisati račun klijenta ${k.ime}? Njegove rezervacije ostaju u kalendaru.`)) return;
+        try {
+            const r = await api('/api/admin/klijenti?id=' + encodeURIComponent(k.id), { method: 'DELETE' });
+            if (!r.ok) { prikaziPoruku('Račun nije obrisan.'); return; }
+            await ucitaj();
+        } catch (err) {
+            if (err.message !== 'Nema prijave') prikaziPoruku('Nema veze s poslužiteljem.');
+        }
+    }
+
+    $('trazi').addEventListener('input', crtaj);
+    $('btnZatvori').addEventListener('click', () => { $('rezultat').hidden = true; $('rezultatLozinka').textContent = ''; });
+    $('btnKopiraj').addEventListener('click', async () => {
+        const tekst = $('rezultatLozinka').textContent;
+        try {
+            await navigator.clipboard.writeText(tekst);
+            $('btnKopiraj').textContent = 'Kopirano';
+            setTimeout(() => { $('btnKopiraj').textContent = 'Kopiraj'; }, 1500);
+        } catch (err) {
+            // ako preglednik ne dopušta kopiranje, lozinku se može označiti dodirom
+            window.getSelection().selectAllChildren($('rezultatLozinka'));
+        }
+    });
+
+    ucitajPostavke();
+    ucitaj();
+</script>
+</body>
+</html>
