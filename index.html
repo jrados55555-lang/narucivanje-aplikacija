@@ -10,305 +10,788 @@
         [hidden] { display: none !important; }
 
         /* Boje se postavljaju iz postavki salona (JS ih mijenja) */
-        :root { --bg: #363435; --fg: #ffffff; --accent: #d32f2f; --accent-fg: #ffffff; }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: Arial, sans-serif;
-            background: var(--bg);
-            color: var(--fg);
-        }
-        .wrap {
-            max-width: 440px;
-            margin: 0 auto;
-            padding: 24px 16px;
-            padding-top: max(24px, env(safe-area-inset-top));
-            padding-bottom: max(24px, env(safe-area-inset-bottom));
+        :root {
+            --bg: #363435; --fg: #ffffff; --accent: #d32f2f; --accent-fg: #ffffff; --ok: #2ecc71;
+            --panel: color-mix(in srgb, var(--bg) 85%, black);
+            --muted: color-mix(in srgb, var(--fg) 12%, var(--bg));
+            --line: color-mix(in srgb, var(--fg) 22%, var(--bg));
         }
 
-        .logo { display: block; margin: 0 auto 8px; max-width: min(80%, 300px); max-height: 220px; height: auto; }
+        body { margin: 0; min-height: 100vh; font-family: Arial, sans-serif; background: var(--bg); color: var(--fg); }
+        .wrap { max-width: 520px; margin: 0 auto; padding: 18px 16px 40px; }
+        h2 { margin: 6px 0 12px; font-size: 22px; }
+        h3 { margin: 0 0 8px; font-size: 17px; }
+
+        .logo { display: block; margin: 0 auto 8px; max-width: min(70%, 240px); max-height: 170px; height: auto; }
         .naziv { margin: 0 0 8px; text-align: center; font-size: 28px; }
-        h2 { margin: 0 0 6px; font-size: 22px; text-align: center; }
-        .tel { margin: 0 0 6px; text-align: center; opacity: 0.85; font-size: 14px; }
-        .tel a { color: inherit; }
 
-        label { display: block; margin-top: 14px; font-weight: bold; }
-
-        /* font-size 16px sprječava automatsko zumiranje na iPhoneu */
-        input, select, button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 6px;
-            font-size: 16px;
-            min-height: 48px;
-            border: 1px solid #bbb;
-            border-radius: 6px;
-            background: #fff;
-            color: #222;
-            font-family: inherit;
+        /* ===== Obrasci ===== */
+        .forma label { display: block; margin-top: 12px; font-weight: bold; }
+        .forma input[type=text], .forma input[type=tel], .forma input[type=password] {
+            width: 100%; padding: 12px; margin-top: 6px; font-size: 16px; min-height: 48px;
+            border: 1px solid #bbb; border-radius: 6px; background: #fff; color: #222; font-family: inherit;
         }
-        input:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+        .forma input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+        .forma .pristanak { display: flex; gap: 10px; align-items: flex-start; font-weight: normal; font-size: 14px; margin-top: 14px; }
+        .forma .pristanak input { width: 22px; height: 22px; margin: 0; flex-shrink: 0; }
 
-        button {
-            background-color: var(--accent);
-            color: var(--accent-fg);
-            border: none;
-            font-size: 17px;
-            margin-top: 22px;
-            cursor: pointer;
-            border-radius: 6px;
-            font-weight: bold;
+        .gumb {
+            display: block; width: 100%; padding: 12px; margin-top: 16px; min-height: 48px;
+            border: 2px solid var(--accent); border-radius: 6px; background: var(--accent); color: var(--accent-fg);
+            font-size: 17px; font-weight: bold; cursor: pointer; font-family: inherit; text-align: center; text-decoration: none;
         }
-        button:hover { filter: brightness(0.88); }
-        button:active { filter: brightness(0.75); }
+        .gumb:hover { filter: brightness(0.88); }
+        .gumb:active { filter: brightness(0.75); }
+        .gumb:disabled { opacity: 0.5; cursor: default; }
+        .gumb-sek { background: none; color: var(--fg); }
+        .gumb-sek:hover { filter: none; background: var(--muted); }
+        .gumb-mali { display: inline-block; width: auto; padding: 8px 14px; min-height: 40px; margin: 0; font-size: 14px; }
 
-        .poruka { margin-top: 15px; padding: 10px; font-weight: bold; text-align: center; border-radius: 6px; }
+        .poruka { margin-top: 14px; padding: 10px; font-weight: bold; text-align: center; border-radius: 6px; }
         .poruka:empty { display: none; }
         .poruka.ok { background: #e8f5e9; color: #1b5e20; }
         .poruka.greska { background: #ffebee; color: #b71c1c; }
+        .poruka a { color: inherit; }
 
-        .napomena { margin: 6px 0 0; font-size: 13px; opacity: 0.85; }
+        .kartica { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 14px; }
+        .napomena { margin: 8px 0 0; font-size: 13px; opacity: 0.8; }
 
-        /* Cjenik */
-        .cjenik {
-            margin: 14px 0 6px;
-            padding: 12px 14px;
-            border: 1px solid color-mix(in srgb, var(--fg) 25%, var(--bg));
-            border-radius: 8px;
-            background: color-mix(in srgb, var(--bg) 88%, black);
+        /* ===== Prijava / registracija ===== */
+        .tabovi { display: flex; gap: 8px; margin: 14px 0 4px; }
+        .tab { flex: 1; padding: 12px; min-height: 48px; border: 2px solid var(--line); border-radius: 6px; background: none; color: var(--fg); font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; }
+        .tab.aktivan { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+
+        /* ===== Gornja traka i izbornik ===== */
+        .traka { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; background: var(--panel); border-bottom: 1px solid var(--line); padding: 6px 10px; padding-top: max(6px, env(safe-area-inset-top)); }
+        .hamburger { width: 46px; height: 46px; border: none; background: none; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; cursor: pointer; padding: 0; }
+        .hamburger span { display: block; width: 24px; height: 3px; background: var(--fg); border-radius: 2px; }
+        .traka-naslov { flex: 1; text-align: center; font-weight: bold; font-size: 17px; padding-right: 46px; }
+
+        .overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0, 0, 0, 0.55); z-index: 40; }
+        .meni {
+            position: fixed; top: 0; left: 0; bottom: 0; width: min(82vw, 300px); z-index: 50;
+            background: var(--panel); transform: translateX(-105%); transition: transform 0.25s ease;
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4); overflow-y: auto; padding-bottom: 20px;
+            padding-top: max(16px, env(safe-area-inset-top));
         }
-        .cjenik h3 { margin: 0 0 8px; font-size: 16px; text-align: center; letter-spacing: 1px; text-transform: uppercase; }
+        .meni.otvoren { transform: none; }
+        .meni-glava { padding: 8px 20px 16px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+        .meni-glava .pozdrav { font-size: 13px; opacity: 0.7; }
+        .meni-glava .ime { font-size: 18px; font-weight: bold; word-break: break-word; }
+        .meni-stavka {
+            display: flex; align-items: center; gap: 12px; width: 100%; padding: 15px 20px; background: none; border: none;
+            color: var(--fg); font-size: 16px; text-align: left; cursor: pointer; text-decoration: none; font-family: inherit;
+        }
+        .meni-stavka:hover, .meni-stavka.aktivna { background: var(--muted); }
+        .meni-razmak { height: 1px; background: var(--line); margin: 8px 0; }
+
+        /* ===== Kalendar ===== */
+        .kal-glava { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 10px; gap: 8px; }
+        .kal-glava h3 { margin: 0; font-size: 18px; text-align: center; flex: 1; }
+        .kal-btn { width: 46px; height: 46px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--fg); font-size: 22px; cursor: pointer; }
+        .kal-btn:disabled { opacity: 0.3; cursor: default; }
+        .kal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .dan-naziv { font-size: 12px; font-weight: bold; padding: 6px 0; background: var(--muted); border-radius: 6px; }
+        .dan {
+            min-height: 56px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 5px 4px;
+            display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+            background: var(--bg); color: var(--fg); font: inherit; opacity: 0.35; cursor: default; text-align: left;
+        }
+        .dan .br { font-size: 13px; font-weight: bold; }
+        .dan .slob { font-size: 11px; font-weight: bold; background: var(--ok); color: #fff; border-radius: 10px; padding: 1px 7px; }
+        .dan.slobodan { opacity: 1; cursor: pointer; border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--bg)); }
+        .dan.slobodan:active { background: color-mix(in srgb, var(--ok) 30%, var(--bg)); }
+        .dan.odabran { outline: 3px solid var(--accent); }
+        .dan.danas .br { text-decoration: underline; }
+        .dan.prazan { border-color: transparent; background: none; opacity: 0; }
+        .legenda { display: flex; align-items: center; gap: 8px; font-size: 13px; opacity: 0.85; margin-top: 10px; }
+        .legenda .tocka { width: 12px; height: 12px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
+
+        .termini { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-top: 10px; }
+        .termin { padding: 12px 6px; min-height: 48px; border: 2px solid var(--accent); border-radius: 8px; background: none; color: var(--fg); font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; }
+        .termin:active, .termin.odabran { background: var(--accent); color: var(--accent-fg); }
+
+        .potvrda-red { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+        .potvrda-red:last-of-type { border-bottom: none; }
+
+        /* ===== Cjenik ===== */
         .cjenik ul { list-style: none; margin: 0; padding: 0; }
-        .cjenik li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed color-mix(in srgb, var(--fg) 25%, var(--bg)); }
+        .cjenik li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
         .cjenik li:last-child { border-bottom: none; }
         .cjenik li strong { white-space: nowrap; }
 
-        /* Gumb "Dodaj u kalendar" nakon uspješne rezervacije */
-        .kalendar-box { margin-top: 14px; text-align: center; }
-        .gumb-link {
-            display: block;
-            padding: 12px;
-            min-height: 48px;
-            line-height: 24px;
-            border: 2px solid var(--accent);
-            border-radius: 6px;
-            color: var(--fg);
-            font-weight: bold;
-            text-decoration: none;
-        }
-        .gumb-link:active { background: var(--accent); color: var(--accent-fg); }
-        .kalendar-napomena { margin: 8px 0 0; font-size: 13px; opacity: 0.8; }
+        /* ===== Moje rezervacije ===== */
+        .rez { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 10px; }
+        .rez.proslo { opacity: 0.6; }
+        .rez .kada { font-size: 18px; font-weight: bold; }
+        .rez .dan-tekst { font-size: 14px; opacity: 0.85; text-transform: capitalize; }
+        .rez .akcije { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .rez .bilj { font-size: 13px; opacity: 0.85; margin-top: 10px; }
+        .rez .bilj a { color: inherit; }
+
+        details.opasno { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 14px; }
+        details.opasno summary { cursor: pointer; font-weight: bold; padding: 6px 0; }
     </style>
 </head>
 <body>
 
+<!-- ============ PRIJAVA I REGISTRACIJA ============ -->
+<section id="prikazAuth" hidden>
     <div class="wrap">
         <img id="logo" class="logo" alt="" hidden>
         <h1 id="naziv" class="naziv" hidden></h1>
 
-        <h2>Rezervacija termina</h2>
-        <p id="salonTel" class="tel" hidden></p>
-
-        <div id="cjenik" class="cjenik" hidden>
-            <h3>Cjenik</h3>
-            <ul id="cjenikLista"></ul>
+        <div class="tabovi">
+            <button type="button" class="tab aktivan" id="tabPrijava">Prijava</button>
+            <button type="button" class="tab" id="tabRegistracija">Registracija</button>
         </div>
 
-        <label for="ime">Ime i prezime:</label>
-        <input type="text" id="ime" placeholder="Unesite vaše ime" maxlength="100" autocomplete="name" required />
+        <form id="formaPrijava" class="forma">
+            <label for="prTelefon">Broj telefona:</label>
+            <input type="tel" id="prTelefon" placeholder="npr. 091 234 5678" maxlength="20" autocomplete="username" required />
+            <label for="prLozinka">Lozinka:</label>
+            <input type="password" id="prLozinka" autocomplete="current-password" required />
+            <button type="submit" class="gumb" id="btnPrijava">Prijavi se</button>
+            <p class="napomena">Prvi put ovdje? Odaberite karticu <b>Registracija</b>.</p>
+        </form>
 
-        <label for="telefon">Broj telefona:</label>
-        <input type="tel" id="telefon" placeholder="npr. 091 234 5678" maxlength="20" autocomplete="tel" required />
+        <form id="formaRegistracija" class="forma" hidden>
+            <label for="regIme">Ime i prezime:</label>
+            <input type="text" id="regIme" maxlength="100" autocomplete="name" required />
+            <label for="regTelefon">Broj telefona:</label>
+            <input type="tel" id="regTelefon" placeholder="npr. 091 234 5678" maxlength="20" autocomplete="tel" required />
+            <label for="regLozinka">Lozinka (najmanje 6 znakova):</label>
+            <input type="password" id="regLozinka" autocomplete="new-password" required />
+            <label for="regLozinka2">Ponovite lozinku:</label>
+            <input type="password" id="regLozinka2" autocomplete="new-password" required />
+            <label class="pristanak">
+                <input type="checkbox" id="regPristanak" />
+                <span>Slažem se da salon sprema moje ime i broj telefona radi rezervacija termina.</span>
+            </label>
+            <button type="submit" class="gumb" id="btnRegistracija">Napravi račun</button>
+        </form>
 
-        <label for="datum">Datum:</label>
-        <input type="date" id="datum" required />
-        <p id="neradniNapomena" class="napomena" hidden></p>
-
-        <label for="vrijeme" id="vrijemeLabel">Vrijeme:</label>
-        <select id="vrijeme" required>
-            <option value="">-- Odaberite datum prvo --</option>
-        </select>
-
-        <button id="btnSpremi">Potvrdi rezervaciju</button>
-        <div id="poruka" class="poruka"></div>
-
-        <div id="kalendarBox" class="kalendar-box" hidden>
-            <a id="kalendarLink" class="gumb-link" href="#">Dodaj u kalendar (s podsjetnikom)</a>
-            <p class="kalendar-napomena">Termin će vam se upisati u kalendar na mobitelu, da ga ne zaboravite.</p>
-        </div>
+        <div id="authPoruka" class="poruka greska"></div>
     </div>
+</section>
 
-    <script>
-        let radnoVrijeme = [];
+<!-- ============ APLIKACIJA (prijavljen klijent) ============ -->
+<section id="prikazApp" hidden>
+    <header class="traka">
+        <button type="button" class="hamburger" id="btnMeni" aria-label="Izbornik"><span></span><span></span><span></span></button>
+        <div class="traka-naslov" id="trakaNaslov">Naruči termin</div>
+    </header>
 
-        const datumInput = document.getElementById('datum');
-        const vrijemeSelect = document.getElementById('vrijeme');
-        const porukaDiv = document.getElementById('poruka');
+    <div class="overlay" id="overlay" hidden></div>
+    <nav class="meni" id="meni" aria-label="Izbornik">
+        <div class="meni-glava">
+            <div class="pozdrav">Prijavljeni ste kao</div>
+            <div class="ime" id="meniIme"></div>
+        </div>
+        <button type="button" class="meni-stavka" data-view="naruci">📅 Naruči termin</button>
+        <button type="button" class="meni-stavka" data-view="moje">🗓️ Moje rezervacije</button>
+        <button type="button" class="meni-stavka" data-view="cjenik">💈 Cjenik</button>
+        <a class="meni-stavka" id="meniTel" href="#" hidden>📞 Nazovi salon</a>
+        <button type="button" class="meni-stavka" data-view="profil">👤 Moj profil</button>
+        <div class="meni-razmak"></div>
+        <button type="button" class="meni-stavka" id="btnOdjava">🚪 Odjava</button>
+    </nav>
 
-        function prikaziPoruku(tekst, vrsta) {
-            porukaDiv.className = 'poruka ' + vrsta;
-            porukaDiv.textContent = tekst;
+    <main class="wrap">
+
+        <!-- Naruči termin -->
+        <div id="view_naruci">
+            <div class="cjenik kartica" id="cjenikMali" hidden>
+                <h3>Cjenik</h3>
+                <ul id="cjenikMaliLista"></ul>
+            </div>
+
+            <div class="kal-glava">
+                <button type="button" class="kal-btn" id="mjPrethodni" aria-label="Prethodni mjesec">&lsaquo;</button>
+                <h3 id="mjNaslov"></h3>
+                <button type="button" class="kal-btn" id="mjSljedeci" aria-label="Sljedeći mjesec">&rsaquo;</button>
+            </div>
+            <div class="kal-grid" id="kalendar"></div>
+            <div class="legenda"><span class="tocka"></span><span>Zeleni dani imaju slobodne termine. Dodirnite dan.</span></div>
+            <p class="napomena" id="neradniNapomena" hidden></p>
+
+            <div class="kartica" id="terminiBox" hidden>
+                <h3 id="terminiNaslov"></h3>
+                <div class="termini" id="terminiLista"></div>
+            </div>
+
+            <div class="kartica" id="potvrdaBox" hidden>
+                <h3>Potvrda rezervacije</h3>
+                <div id="potvrdaSadrzaj"></div>
+                <button type="button" class="gumb" id="btnPotvrdi">Potvrdi rezervaciju</button>
+                <button type="button" class="gumb gumb-sek" id="btnOdustani">Odustani</button>
+            </div>
+
+            <div id="narPoruka" class="poruka"></div>
+        </div>
+
+        <!-- Moje rezervacije -->
+        <div id="view_moje" hidden>
+            <h2>Moje rezervacije</h2>
+            <div id="mojePoruka" class="poruka"></div>
+            <div id="mojeLista"></div>
+        </div>
+
+        <!-- Cjenik -->
+        <div id="view_cjenik" hidden>
+            <h2>Cjenik</h2>
+            <div class="cjenik kartica">
+                <ul id="cjenikLista"></ul>
+            </div>
+            <a class="gumb" id="cjenikTel" href="#" hidden>📞 Nazovi salon</a>
+        </div>
+
+        <!-- Moj profil -->
+        <div id="view_profil" hidden>
+            <h2>Moj profil</h2>
+            <div class="kartica">
+                <div class="potvrda-red"><span>Ime i prezime</span><strong id="profilIme"></strong></div>
+                <div class="potvrda-red"><span>Telefon</span><strong id="profilTelefon"></strong></div>
+            </div>
+
+            <form id="formaLozinka" class="forma kartica">
+                <h3>Promjena lozinke</h3>
+                <label for="lzStara">Trenutna lozinka:</label>
+                <input type="password" id="lzStara" autocomplete="current-password" required />
+                <label for="lzNova">Nova lozinka (najmanje 6 znakova):</label>
+                <input type="password" id="lzNova" autocomplete="new-password" required />
+                <label for="lzNova2">Ponovite novu lozinku:</label>
+                <input type="password" id="lzNova2" autocomplete="new-password" required />
+                <button type="submit" class="gumb">Spremi novu lozinku</button>
+            </form>
+            <div id="profilPoruka" class="poruka"></div>
+
+            <details class="opasno">
+                <summary>Brisanje računa</summary>
+                <form id="formaBrisanje" class="forma">
+                    <p class="napomena">Brisanjem se trajno brišu vaš račun i sve vaše rezervacije. To se ne može poništiti.</p>
+                    <label for="brLozinka">Upišite lozinku za potvrdu:</label>
+                    <input type="password" id="brLozinka" autocomplete="current-password" required />
+                    <button type="submit" class="gumb gumb-sek">Obriši moj račun</button>
+                </form>
+            </details>
+        </div>
+
+    </main>
+</section>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+
+    function el(tag, klasa, tekst) {
+        const e = document.createElement(tag);
+        if (klasa) e.className = klasa;
+        if (tekst !== undefined) e.textContent = tekst;
+        return e;
+    }
+
+    const DANI = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
+    const DANI_KRATKO = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
+    const MJESECI = ['Siječanj', 'Veljača', 'Ožujak', 'Travanj', 'Svibanj', 'Lipanj', 'Srpanj', 'Kolovoz', 'Rujan', 'Listopad', 'Studeni', 'Prosinac'];
+    const NASLOVI = { naruci: 'Naruči termin', moje: 'Moje rezervacije', cjenik: 'Cjenik', profil: 'Moj profil' };
+    const VIEWOVI = ['naruci', 'moje', 'cjenik', 'profil'];
+    const MAX_MJESECI_UNAPRIJED = 6;
+
+    let P = { termini: [], cjenik: [], neradniDani: [], telefon: '', otkazSati: 2, maxAktivnih: 3 };
+    let korisnik = null;
+    const sad = new Date();
+    let prikazMj = { g: sad.getFullYear(), m: sad.getMonth() };
+    let odabraniDatum = null;
+    let odabranTermin = null;
+
+    // ---------- pomoćne funkcije ----------
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function iso(g, m, d) { return `${g}-${pad(m + 1)}-${pad(d)}`; }
+    function hrDatum(isoDatum) { return isoDatum.split('-').reverse().join('.') + '.'; }
+    function imeDana(isoDatum) {
+        const [g, m, d] = isoDatum.split('-').map(Number);
+        return DANI[new Date(g, m - 1, d).getDay()];
+    }
+
+    async function api(url, opcije) {
+        let res;
+        try {
+            res = await fetch(url, opcije);
+        } catch (err) {
+            return { ok: false, status: 0, tijelo: null };
+        }
+        let tijelo = null;
+        try { tijelo = await res.json(); } catch (err) { /* nema JSON-a */ }
+        return { ok: res.ok, status: res.status, tijelo };
+    }
+
+    function jsonOpcije(metoda, podaci) {
+        return { method: metoda, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(podaci) };
+    }
+
+    function poruka(elId, tekst, vrsta) {
+        const e = $(elId);
+        e.className = 'poruka ' + (vrsta || '');
+        e.textContent = tekst || '';
+    }
+
+    function tekstGreske(r, zadano) {
+        if (r.status === 0) return 'Nema veze s poslužiteljem. Pokušajte ponovno.';
+        if (r.status === 429) return 'Previše pokušaja. Pokušajte ponovno za nekoliko minuta.';
+        return (typeof r.tijelo === 'string' && r.tijelo) ? r.tijelo : zadano;
+    }
+
+    // Koliko je boja svijetla (0 = crna, 1 = bijela)
+    function osvjetljenje(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    }
+
+    // ---------- postavke salona ----------
+
+    function primijeniPostavke(p) {
+        P = p;
+        const root = document.documentElement.style;
+        root.setProperty('--bg', p.pozadina);
+        root.setProperty('--fg', osvjetljenje(p.pozadina) < 0.55 ? '#ffffff' : '#222222');
+        root.setProperty('--accent', p.boja);
+        root.setProperty('--accent-fg', osvjetljenje(p.boja) < 0.6 ? '#ffffff' : '#111111');
+        document.title = p.naziv + ' - Rezervacija termina';
+
+        // Logo; ako ne postoji, prikaži naziv salona tekstom
+        const logo = $('logo');
+        const naziv = $('naziv');
+        naziv.textContent = p.naziv;
+        logo.onload = () => { logo.hidden = false; };
+        logo.onerror = () => { naziv.hidden = false; };
+        logo.src = p.logo;
+
+        // Telefon salona
+        if (p.telefon) {
+            const veza = 'tel:' + p.telefon.replace(/[^\d+]/g, '');
+            $('meniTel').href = veza; $('meniTel').hidden = false;
+            $('cjenikTel').href = veza; $('cjenikTel').hidden = false;
         }
 
-        // Koliko je boja svijetla (0 = crna, 1 = bijela)
-        function osvjetljenje(hex) {
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        }
-
-        function primijeniPostavke(p) {
-            const root = document.documentElement.style;
-            root.setProperty('--bg', p.pozadina);
-            root.setProperty('--fg', osvjetljenje(p.pozadina) < 0.55 ? '#ffffff' : '#222222');
-            root.setProperty('--accent', p.boja);
-            root.setProperty('--accent-fg', osvjetljenje(p.boja) < 0.6 ? '#ffffff' : '#111111');
-
-            document.title = p.naziv + ' - Rezervacija termina';
-
-            // Logo; ako ne postoji, prikaži naziv salona tekstom
-            const logo = document.getElementById('logo');
-            const naziv = document.getElementById('naziv');
-            naziv.textContent = p.naziv;
-            logo.onload = () => { logo.hidden = false; };
-            logo.onerror = () => { naziv.hidden = false; };
-            logo.src = p.logo;
-
-            if (p.telefon) {
-                const tel = document.getElementById('salonTel');
-                tel.textContent = 'Pitanja? Nazovite: ';
-                const a = document.createElement('a');
-                a.href = 'tel:' + p.telefon.replace(/[^\d+]/g, '');
-                a.textContent = p.telefon;
-                tel.appendChild(a);
-                tel.hidden = false;
-            }
-
-            radnoVrijeme = p.termini;
-            if (radnoVrijeme.length > 0) {
-                document.getElementById('vrijemeLabel').textContent =
-                    `Vrijeme (${radnoVrijeme[0]} - ${radnoVrijeme[radnoVrijeme.length - 1]}):`;
-            }
-
-            // Neradni dani u tjednu (npr. nedjelja)
-            const imenaDana = ['', 'ponedjeljkom', 'utorkom', 'srijedom', 'četvrtkom', 'petkom', 'subotom', 'nedjeljom'];
-            if (Array.isArray(p.neradniDani) && p.neradniDani.length > 0) {
-                const n = document.getElementById('neradniNapomena');
-                n.textContent = 'Ne radimo: ' + p.neradniDani.slice().sort((x, y) => x - y).map(d => imenaDana[d]).join(', ') + '.';
-                n.hidden = false;
-            }
-
-            // Cjenik (iz postavki salona); ako je prazan, ne prikazuje se
-            if (Array.isArray(p.cjenik) && p.cjenik.length > 0) {
-                const lista = document.getElementById('cjenikLista');
-                lista.innerHTML = '';
-                p.cjenik.forEach(stavka => {
-                    const li = document.createElement('li');
-                    const naziv = document.createElement('span');
-                    naziv.textContent = stavka.naziv;
-                    const cijena = document.createElement('strong');
-                    cijena.textContent = stavka.cijena;
-                    li.append(naziv, cijena);
-                    lista.appendChild(li);
-                });
-                document.getElementById('cjenik').hidden = false;
-            }
-        }
-
-        async function ucitajPostavke() {
-            try {
-                const res = await fetch('/api/postavke');
-                primijeniPostavke(await res.json());
-            } catch (err) {
-                prikaziPoruku('Greška pri učitavanju stranice. Osvježite je.', 'greska');
-            }
-        }
-
-        // Postavi minimalni datum na danas (lokalni datum, ne UTC)
-        const sad = new Date();
-        datumInput.min = `${sad.getFullYear()}-${String(sad.getMonth() + 1).padStart(2, '0')}-${String(sad.getDate()).padStart(2, '0')}`;
-
-        datumInput.addEventListener('change', async () => {
-            const odabraniDatum = datumInput.value;
-            if (!odabraniDatum) return;
-
-            // Server vraća stanje dana (bez imena klijenata): je li dan zatvoren te koja su vremena zauzeta ili blokirana
-            prikaziPoruku('', 'ok');
-            document.getElementById('kalendarBox').hidden = true;
-
-            let stanje;
-            try {
-                const res = await fetch('/api/zauzeto?datum=' + encodeURIComponent(odabraniDatum));
-                stanje = await res.json();
-            } catch (err) {
-                prikaziPoruku('Greška pri učitavanju termina. Pokušajte ponovno.', 'greska');
-                return;
-            }
-
-            if (stanje.zatvoren) {
-                vrijemeSelect.innerHTML = '<option value="">-- Taj dan nije moguće rezervirati --</option>';
-                prikaziPoruku('Na odabrani dan ne radimo. Molimo odaberite drugi datum.', 'greska');
-                return;
-            }
-
-            vrijemeSelect.innerHTML = '<option value="">-- Odaberite vrijeme --</option>';
-
-            radnoVrijeme.forEach(sat => {
-                const option = document.createElement('option');
-                option.value = sat;
-                if (stanje.zauzeto.includes(sat)) {
-                    option.textContent = `${sat} (Zauzeto)`;
-                    option.disabled = true;
-                } else if (stanje.blokirano.includes(sat)) {
-                    option.textContent = `${sat} (Nedostupno)`;
-                    option.disabled = true;
-                } else {
-                    option.textContent = sat;
-                }
-                vrijemeSelect.appendChild(option);
+        // Cjenik (na stranici za naručivanje i u izborniku)
+        ['cjenikMaliLista', 'cjenikLista'].forEach(id => {
+            const lista = $(id);
+            lista.innerHTML = '';
+            (p.cjenik || []).forEach(stavka => {
+                const li = el('li');
+                li.append(el('span', '', stavka.naziv), el('strong', '', stavka.cijena));
+                lista.appendChild(li);
             });
         });
+        $('cjenikMali').hidden = !(p.cjenik && p.cjenik.length > 0);
 
-        document.getElementById('btnSpremi').addEventListener('click', async () => {
-            const ime = document.getElementById('ime').value;
-            const telefon = document.getElementById('telefon').value;
-            const datum = datumInput.value;
-            const vrijeme = vrijemeSelect.value;
-            document.getElementById('kalendarBox').hidden = true;
+        // Neradni dani u tjednu
+        const imenaDana = ['', 'ponedjeljkom', 'utorkom', 'srijedom', 'četvrtkom', 'petkom', 'subotom', 'nedjeljom'];
+        if (Array.isArray(p.neradniDani) && p.neradniDani.length > 0) {
+            const n = $('neradniNapomena');
+            n.textContent = 'Ne radimo: ' + p.neradniDani.slice().sort((x, y) => x - y).map(d => imenaDana[d]).join(', ') + '.';
+            n.hidden = false;
+        }
+    }
 
-            if (!ime || !telefon || !datum || !vrijeme) {
-                prikaziPoruku('Molimo ispunite sva polja!', 'greska');
-                return;
+    // ---------- prikaz: prijava ili aplikacija ----------
+
+    function pokaziAuth() {
+        korisnik = null;
+        $('prikazAuth').hidden = false;
+        $('prikazApp').hidden = true;
+        zatvoriMeni();
+        poruka('authPoruka', '');
+    }
+
+    function pokaziApp() {
+        $('prikazAuth').hidden = true;
+        $('prikazApp').hidden = false;
+        $('meniIme').textContent = korisnik.ime;
+        $('profilIme').textContent = korisnik.ime;
+        $('profilTelefon').textContent = korisnik.telefon;
+        prikazMj = { g: sad.getFullYear(), m: sad.getMonth() };
+        odabraniDatum = null;
+        odabranTermin = null;
+        pokaziView('naruci');
+    }
+
+    function sesijaIstekla() {
+        pokaziAuth();
+        poruka('authPoruka', 'Sesija je istekla. Prijavite se ponovno.', 'greska');
+    }
+
+    // ---------- izbornik (tri crtice) ----------
+
+    function otvoriMeni() { $('meni').classList.add('otvoren'); $('overlay').hidden = false; }
+    function zatvoriMeni() { $('meni').classList.remove('otvoren'); $('overlay').hidden = true; }
+
+    function pokaziView(ime) {
+        VIEWOVI.forEach(v => { $('view_' + v).hidden = (v !== ime); });
+        document.querySelectorAll('.meni-stavka[data-view]').forEach(b => b.classList.toggle('aktivna', b.dataset.view === ime));
+        $('trakaNaslov').textContent = NASLOVI[ime];
+        zatvoriMeni();
+        window.scrollTo(0, 0);
+        if (ime === 'naruci') ucitajMjesec();
+        if (ime === 'moje') ucitajMoje();
+    }
+
+    $('btnMeni').addEventListener('click', () => { $('meni').classList.contains('otvoren') ? zatvoriMeni() : otvoriMeni(); });
+    $('overlay').addEventListener('click', zatvoriMeni);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') zatvoriMeni(); });
+    document.querySelectorAll('.meni-stavka[data-view]').forEach(b => b.addEventListener('click', () => pokaziView(b.dataset.view)));
+
+    $('btnOdjava').addEventListener('click', async () => {
+        await api('/api/klijent/odjava', { method: 'POST' });
+        pokaziAuth();
+    });
+
+    // ---------- prijava i registracija ----------
+
+    function pokaziTab(prijava) {
+        $('tabPrijava').classList.toggle('aktivan', prijava);
+        $('tabRegistracija').classList.toggle('aktivan', !prijava);
+        $('formaPrijava').hidden = !prijava;
+        $('formaRegistracija').hidden = prijava;
+        poruka('authPoruka', '');
+    }
+    $('tabPrijava').addEventListener('click', () => pokaziTab(true));
+    $('tabRegistracija').addEventListener('click', () => pokaziTab(false));
+
+    $('formaPrijava').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const gumb = $('btnPrijava');
+        gumb.disabled = true;
+        poruka('authPoruka', '');
+        const r = await api('/api/klijent/prijava', jsonOpcije('POST', {
+            telefon: $('prTelefon').value, lozinka: $('prLozinka').value
+        }));
+        gumb.disabled = false;
+        if (r.ok) {
+            korisnik = r.tijelo;
+            $('prLozinka').value = '';
+            pokaziApp();
+        } else if (r.status === 401) {
+            poruka('authPoruka', 'Pogrešan broj telefona ili lozinka.', 'greska');
+        } else {
+            poruka('authPoruka', tekstGreske(r, 'Greška pri prijavi. Pokušajte ponovno.'), 'greska');
+        }
+    });
+
+    $('formaRegistracija').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        poruka('authPoruka', '');
+        if ($('regLozinka').value !== $('regLozinka2').value) {
+            poruka('authPoruka', 'Lozinke se ne podudaraju.', 'greska');
+            return;
+        }
+        if (!$('regPristanak').checked) {
+            poruka('authPoruka', 'Za registraciju je potrebna suglasnost za spremanje podataka.', 'greska');
+            return;
+        }
+        const gumb = $('btnRegistracija');
+        gumb.disabled = true;
+        const r = await api('/api/klijent/registracija', jsonOpcije('POST', {
+            ime: $('regIme').value, telefon: $('regTelefon').value, lozinka: $('regLozinka').value
+        }));
+        gumb.disabled = false;
+        if (r.ok) {
+            korisnik = r.tijelo;
+            $('regLozinka').value = ''; $('regLozinka2').value = '';
+            pokaziApp();
+        } else {
+            poruka('authPoruka', tekstGreske(r, 'Registracija nije uspjela. Provjerite podatke.'), 'greska');
+        }
+    });
+
+    // ---------- naručivanje: kalendar ----------
+
+    async function ucitajMjesec() {
+        const mjesec = `${prikazMj.g}-${pad(prikazMj.m + 1)}`;
+        $('mjNaslov').textContent = `${MJESECI[prikazMj.m]} ${prikazMj.g}.`;
+
+        const prviMjesec = (prikazMj.g === sad.getFullYear() && prikazMj.m === sad.getMonth());
+        const razlika = (prikazMj.g - sad.getFullYear()) * 12 + (prikazMj.m - sad.getMonth());
+        $('mjPrethodni').disabled = prviMjesec;
+        $('mjSljedeci').disabled = razlika >= MAX_MJESECI_UNAPRIJED;
+
+        const r = await api('/api/dani?mjesec=' + mjesec);
+        if (r.status === 401) { sesijaIstekla(); return; }
+        if (!r.ok) {
+            poruka('narPoruka', tekstGreske(r, 'Greška pri učitavanju kalendara. Pokušajte ponovno.'), 'greska');
+            return;
+        }
+        crtajKalendar(r.tijelo);
+    }
+
+    function crtajKalendar(podaci) {
+        const slobodno = {};
+        podaci.forEach(d => { slobodno[d.datum] = d.slobodno; });
+
+        const grid = $('kalendar');
+        grid.innerHTML = '';
+        DANI_KRATKO.forEach(n => grid.appendChild(el('div', 'dan-naziv', n)));
+
+        const prvi = new Date(prikazMj.g, prikazMj.m, 1).getDay();       // 0 = nedjelja
+        const pomak = prvi === 0 ? 6 : prvi - 1;                          // tjedan počinje ponedjeljkom
+        for (let i = 0; i < pomak; i++) grid.appendChild(el('div', 'dan prazan'));
+
+        const brojDana = new Date(prikazMj.g, prikazMj.m + 1, 0).getDate();
+        const danasIso = iso(sad.getFullYear(), sad.getMonth(), sad.getDate());
+
+        for (let dan = 1; dan <= brojDana; dan++) {
+            const datum = iso(prikazMj.g, prikazMj.m, dan);
+            const n = slobodno[datum] || 0;
+
+            const polje = el('div', 'dan');
+            polje.dataset.datum = datum;
+            polje.appendChild(el('span', 'br', String(dan)));
+            if (datum === danasIso) polje.classList.add('danas');
+            if (datum === odabraniDatum) polje.classList.add('odabran');
+
+            if (n > 0) {
+                polje.classList.add('slobodan');
+                polje.setAttribute('role', 'button');
+                polje.setAttribute('aria-label', `${dan}. ${MJESECI[prikazMj.m]}, slobodnih termina: ${n}`);
+                polje.appendChild(el('span', 'slob', String(n)));
+                polje.addEventListener('click', () => odaberiDan(datum));
             }
+            grid.appendChild(polje);
+        }
+    }
 
-            const res = await fetch('/api/rezervacije', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ime, telefon, datum, vrijeme })
-            });
+    $('mjPrethodni').addEventListener('click', () => {
+        prikazMj.m--;
+        if (prikazMj.m < 0) { prikazMj.m = 11; prikazMj.g--; }
+        ucitajMjesec();
+    });
+    $('mjSljedeci').addEventListener('click', () => {
+        prikazMj.m++;
+        if (prikazMj.m > 11) { prikazMj.m = 0; prikazMj.g++; }
+        ucitajMjesec();
+    });
 
-            if (res.ok) {
-                const datumHr = datum.split('-').reverse().join('.') + '.';
-                prikaziPoruku(`Uspješno ste rezervirali termin: ${datumHr} u ${vrijeme}`, 'ok');
-                document.getElementById('kalendarLink').href =
-                    `/api/kalendar?datum=${encodeURIComponent(datum)}&vrijeme=${encodeURIComponent(vrijeme)}`;
-                document.getElementById('kalendarBox').hidden = false;
-                document.getElementById('ime').value = '';
-                document.getElementById('telefon').value = '';
-                datumInput.value = '';
-                vrijemeSelect.innerHTML = '<option value="">-- Odaberite datum prvo --</option>';
-            } else if (res.status === 409) {
-                prikaziPoruku('Termin je u međuvremenu zauzet ili nije dostupan. Odaberite drugi termin.', 'greska');
-            } else if (res.status === 429) {
-                prikaziPoruku('Previše pokušaja. Pokušajte ponovno za nekoliko minuta.', 'greska');
-            } else {
-                prikaziPoruku('Provjerite unesene podatke (ime, telefon, datum).', 'greska');
-            }
+    // ---------- naručivanje: termini jednog dana ----------
+
+    async function odaberiDan(datum) {
+        odabraniDatum = datum;
+        odabranTermin = null;
+        $('potvrdaBox').hidden = true;
+        poruka('narPoruka', '');
+        document.querySelectorAll('#kalendar .dan').forEach(p => p.classList.toggle('odabran', p.dataset.datum === datum));
+
+        const r = await api('/api/termini?datum=' + encodeURIComponent(datum));
+        if (r.status === 401) { sesijaIstekla(); return; }
+        if (!r.ok) { poruka('narPoruka', tekstGreske(r, 'Greška pri učitavanju termina.'), 'greska'); return; }
+
+        $('terminiNaslov').textContent = `Slobodni termini: ${imeDana(datum)}, ${hrDatum(datum)}`;
+        const lista = $('terminiLista');
+        lista.innerHTML = '';
+        if (r.tijelo.length === 0) {
+            lista.appendChild(el('p', 'napomena', 'Za ovaj dan više nema slobodnih termina. Odaberite drugi dan.'));
+        }
+        r.tijelo.forEach(vrijeme => {
+            const b = el('button', 'termin', vrijeme);
+            b.type = 'button';
+            b.addEventListener('click', () => odaberiTermin(vrijeme, b));
+            lista.appendChild(b);
+        });
+        $('terminiBox').hidden = false;
+        $('terminiBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function odaberiTermin(vrijeme, gumb) {
+        odabranTermin = vrijeme;
+        document.querySelectorAll('#terminiLista .termin').forEach(b => b.classList.toggle('odabran', b === gumb));
+
+        const stavka = (P.cjenik && P.cjenik[0]) || null;
+        const sadrzaj = $('potvrdaSadrzaj');
+        sadrzaj.innerHTML = '';
+        const redovi = [
+            ['Usluga', stavka ? stavka.naziv : 'Termin'],
+            ['Datum', `${imeDana(odabraniDatum)}, ${hrDatum(odabraniDatum)}`],
+            ['Vrijeme', vrijeme]
+        ];
+        if (stavka) redovi.push(['Cijena', stavka.cijena]);
+        redovi.forEach(([naziv, vrijednost]) => {
+            const red = el('div', 'potvrda-red');
+            red.append(el('span', '', naziv), el('strong', '', vrijednost));
+            sadrzaj.appendChild(red);
         });
 
-        ucitajPostavke();
-    </script>
+        $('potvrdaBox').hidden = false;
+        $('potvrdaBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    $('btnOdustani').addEventListener('click', () => {
+        odabranTermin = null;
+        $('potvrdaBox').hidden = true;
+        document.querySelectorAll('#terminiLista .termin').forEach(b => b.classList.remove('odabran'));
+    });
+
+    $('btnPotvrdi').addEventListener('click', async () => {
+        if (!odabraniDatum || !odabranTermin) return;
+        const gumb = $('btnPotvrdi');
+        gumb.disabled = true;
+
+        const datum = odabraniDatum;
+        const vrijeme = odabranTermin;
+        const r = await api('/api/naruci', jsonOpcije('POST', { datum, vrijeme }));
+        gumb.disabled = false;
+
+        if (r.status === 401) { sesijaIstekla(); return; }
+
+        if (r.ok) {
+            odabranTermin = null;
+            odabraniDatum = null;
+            $('potvrdaBox').hidden = true;
+            $('terminiBox').hidden = true;
+
+            const kal = `/api/kalendar?datum=${encodeURIComponent(datum)}&vrijeme=${encodeURIComponent(vrijeme)}`;
+            const p = $('narPoruka');
+            p.className = 'poruka ok';
+            p.textContent = `Termin je rezerviran: ${imeDana(datum)}, ${hrDatum(datum)} u ${vrijeme}. `;
+            const veza = el('a', '', 'Dodaj u kalendar');
+            veza.href = kal;
+            p.appendChild(veza);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            ucitajMjesec();
+        } else {
+            poruka('narPoruka', tekstGreske(r, 'Rezervacija nije uspjela. Pokušajte ponovno.'), 'greska');
+            // Termin je možda netom zauzet: osvježi popis dana i termina
+            ucitajMjesec();
+            if (odabraniDatum) odaberiDan(odabraniDatum);
+        }
+    });
+
+    // ---------- moje rezervacije ----------
+
+    async function ucitajMoje() {
+        poruka('mojePoruka', '');
+        const lista = $('mojeLista');
+        lista.innerHTML = '';
+
+        const r = await api('/api/moje/rezervacije');
+        if (r.status === 401) { sesijaIstekla(); return; }
+        if (!r.ok) { poruka('mojePoruka', tekstGreske(r, 'Greška pri učitavanju rezervacija.'), 'greska'); return; }
+
+        const buduce = r.tijelo.filter(x => !x.proslo).sort((a, b) => (a.datum + a.vrijeme).localeCompare(b.datum + b.vrijeme));
+        const proslo = r.tijelo.filter(x => x.proslo);
+
+        if (buduce.length === 0) {
+            const prazno = el('div', 'kartica');
+            prazno.appendChild(el('p', '', 'Nemate nadolazećih rezervacija.'));
+            const gumb = el('button', 'gumb', 'Naruči termin');
+            gumb.type = 'button';
+            gumb.addEventListener('click', () => pokaziView('naruci'));
+            prazno.appendChild(gumb);
+            lista.appendChild(prazno);
+        }
+        buduce.forEach(x => lista.appendChild(kartica(x, false)));
+
+        if (proslo.length > 0) {
+            lista.appendChild(el('h3', '', 'Prošli termini')).style.marginTop = '24px';
+            proslo.forEach(x => lista.appendChild(kartica(x, true)));
+        }
+    }
+
+    function kartica(x, prosla) {
+        const k = el('div', 'rez' + (prosla ? ' proslo' : ''));
+        k.appendChild(el('div', 'kada', `${hrDatum(x.datum)} u ${x.vrijeme}`));
+        k.appendChild(el('div', 'dan-tekst', imeDana(x.datum)));
+        if (prosla) return k;
+
+        const akcije = el('div', 'akcije');
+        const kal = el('a', 'gumb gumb-sek gumb-mali', 'Dodaj u kalendar');
+        kal.href = `/api/kalendar?datum=${encodeURIComponent(x.datum)}&vrijeme=${encodeURIComponent(x.vrijeme)}`;
+        akcije.appendChild(kal);
+
+        if (x.mozeOtkazati) {
+            const otkazi = el('button', 'gumb gumb-mali', 'Otkaži termin');
+            otkazi.type = 'button';
+            otkazi.addEventListener('click', () => otkaziTermin(x));
+            akcije.appendChild(otkazi);
+        }
+        k.appendChild(akcije);
+
+        if (!x.mozeOtkazati) {
+            const bilj = el('div', 'bilj', `Termin se može otkazati najkasnije ${P.otkazSati} h prije početka.`);
+            if (P.telefon) {
+                bilj.append(' Nazovite salon: ');
+                const tel = el('a', '', P.telefon);
+                tel.href = 'tel:' + P.telefon.replace(/[^\d+]/g, '');
+                bilj.appendChild(tel);
+            }
+            k.appendChild(bilj);
+        }
+        return k;
+    }
+
+    async function otkaziTermin(x) {
+        if (!confirm(`Otkazati termin ${hrDatum(x.datum)} u ${x.vrijeme}?`)) return;
+        const r = await api('/api/moje/rezervacije/' + encodeURIComponent(x.id), { method: 'DELETE' });
+        if (r.status === 401) { sesijaIstekla(); return; }
+        if (r.ok) {
+            await ucitajMoje();
+            poruka('mojePoruka', 'Termin je otkazan.', 'ok');
+        } else {
+            poruka('mojePoruka', tekstGreske(r, 'Otkazivanje nije uspjelo.'), 'greska');
+        }
+    }
+
+    // ---------- profil ----------
+
+    $('formaLozinka').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        poruka('profilPoruka', '');
+        if ($('lzNova').value !== $('lzNova2').value) {
+            poruka('profilPoruka', 'Nove lozinke se ne podudaraju.', 'greska');
+            return;
+        }
+        const r = await api('/api/klijent/promjena-lozinke', jsonOpcije('POST', {
+            stara: $('lzStara').value, nova: $('lzNova').value
+        }));
+        if (r.status === 401) { sesijaIstekla(); return; }
+        if (r.ok) {
+            poruka('profilPoruka', 'Lozinka je promijenjena.', 'ok');
+            $('lzStara').value = ''; $('lzNova').value = ''; $('lzNova2').value = '';
+        } else {
+            poruka('profilPoruka', tekstGreske(r, 'Promjena lozinke nije uspjela.'), 'greska');
+        }
+    });
+
+    $('formaBrisanje').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!confirm('Trajno obrisati račun i sve rezervacije?')) return;
+        const r = await api('/api/klijent/brisanje-racuna', jsonOpcije('POST', { lozinka: $('brLozinka').value }));
+        if (r.status === 401) { sesijaIstekla(); return; }
+        if (r.ok) {
+            $('brLozinka').value = '';
+            pokaziAuth();
+            poruka('authPoruka', 'Vaš račun je obrisan.', 'ok');
+        } else {
+            poruka('profilPoruka', tekstGreske(r, 'Brisanje nije uspjelo.'), 'greska');
+        }
+    });
+
+    // ---------- pokretanje ----------
+
+    async function pokreni() {
+        const postavke = await api('/api/postavke');
+        if (postavke.ok) primijeniPostavke(postavke.tijelo);
+
+        const ja = await api('/api/klijent/ja');
+        if (ja.ok) {
+            korisnik = ja.tijelo;
+            pokaziApp();
+        } else {
+            pokaziAuth();
+        }
+    }
+    pokreni();
+</script>
 </body>
 </html>
